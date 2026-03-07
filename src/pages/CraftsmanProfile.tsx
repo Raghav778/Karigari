@@ -3,95 +3,243 @@ import { useBackground } from "@/hooks/useBackground";
 import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, Play, Star, MapPin, Phone, Mail, Clock,
-  ChevronLeft, ChevronRight, Check, LogIn, Share2,
-  MessageSquare, Instagram, Youtube, Globe, Award,
-  Hammer, Tag, Sparkles, Eye, X, ExternalLink,
+  ArrowLeft,
+  Play,
+  Star,
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  LogIn,
+  Share2,
+  MessageSquare,
+  Instagram,
+  Youtube,
+  Globe,
+  Award,
+  Hammer,
+  Tag,
+  Sparkles,
+  Eye,
+  X,
+  ExternalLink,
+  Send,
 } from "lucide-react";
-import { craftsmen, mapFirestoreKarigarToCraftsman, type Craftsman } from "@/data/craftsmen";
+import {
+  craftsmen,
+  mapFirestoreKarigarToCraftsman,
+  type Craftsman,
+} from "@/data/craftsmen";
 import { getCraftImage } from "@/lib/craftImages";
 import CraftsmanCard from "@/components/CraftsmanCard";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginModal from "@/components/LoginModal";
-import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  addDoc,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "../firebase";
 
 const tabs = ["About", "Portfolio", "Booking"] as const;
 
-const reviews = [
-  { name: "Priya Sharma",  rating: 5, comment: "An absolutely transformative experience. The knowledge and patience made this a once-in-a-lifetime workshop.", date: "Jan 2025" },
-  { name: "Arjun Mehta",   rating: 5, comment: "Watching the craft come alive was magical. Highly recommend to anyone visiting.",                              date: "Dec 2024" },
-  { name: "Sara Thompson", rating: 4, comment: "Incredible skill and a warm, welcoming host. The session flew by far too quickly.",                             date: "Nov 2024" },
+const STATIC_REVIEWS = [
+  {
+    name: "Priya Sharma",
+    rating: 5,
+    comment:
+      "An absolutely transformative experience. The knowledge and patience made this a once-in-a-lifetime workshop.",
+    date: "Jan 2025",
+  },
+  {
+    name: "Arjun Mehta",
+    rating: 5,
+    comment:
+      "Watching the craft come alive was magical. Highly recommend to anyone visiting.",
+    date: "Dec 2024",
+  },
+  {
+    name: "Sara Thompson",
+    rating: 4,
+    comment:
+      "Incredible skill and a warm, welcoming host. The session flew by far too quickly.",
+    date: "Nov 2024",
+  },
 ];
 
 const MANDALA_BG = `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23c9a227' stroke-opacity='0.07' stroke-width='0.8'%3E%3Ccircle cx='30' cy='30' r='22'/%3E%3Ccircle cx='30' cy='30' r='15'/%3E%3Ccircle cx='30' cy='30' r='8'/%3E%3Cline x1='30' y1='8' x2='30' y2='52'/%3E%3Cline x1='8' y1='30' x2='52' y2='30'/%3E%3Cline x1='14' y1='14' x2='46' y2='46'/%3E%3Cline x1='46' y1='14' x2='14' y2='46'/%3E%3C/g%3E%3C/svg%3E")`;
 
-// ─── Lightbox ─────────────────────────────────────────────────────────────────
 const Lightbox = ({ src, onClose }: { src: string; onClose: () => void }) => (
   <motion.div
-    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
     className="fixed inset-0 z-[200] flex items-center justify-center p-4"
     style={{ background: "rgba(0,0,0,0.92)" }}
     onClick={onClose}
   >
-    <button className="absolute top-4 right-4 text-white hover:text-yellow-400 transition-colors z-10" onClick={onClose}>
+    <button
+      className="absolute top-4 right-4 text-white hover:text-yellow-400 transition-colors z-10"
+      onClick={onClose}
+    >
       <X size={28} />
     </button>
     <motion.img
-      initial={{ scale: 0.85 }} animate={{ scale: 1 }}
-      src={src} alt="Preview"
+      initial={{ scale: 0.85 }}
+      animate={{ scale: 1 }}
+      src={src}
+      alt="Preview"
       className="max-w-full max-h-[88vh] object-contain rounded shadow-2xl"
-      onClick={e => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
     />
   </motion.div>
 );
 
-// ─── Tag badge ────────────────────────────────────────────────────────────────
 const Tag2 = ({ label }: { label: string }) => (
   <span className="seal-badge text-[10px]">{label}</span>
 );
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+const StarPicker = ({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) => {
+  const [hovered, setHovered] = useState(0);
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          onMouseEnter={() => setHovered(n)}
+          onMouseLeave={() => setHovered(0)}
+          className="transition-transform hover:scale-110"
+        >
+          <Star
+            size={24}
+            fill={(hovered || value) >= n ? "currentColor" : "none"}
+            className={(hovered || value) >= n ? "text-gold" : "text-gold/30"}
+          />
+        </button>
+      ))}
+      {value > 0 && (
+        <span className="ml-2 font-body text-xs text-muted-foreground">
+          {["", "Poor", "Fair", "Good", "Very Good", "Excellent"][value]}
+        </span>
+      )}
+    </div>
+  );
+};
+
+const ReviewCard = ({
+  name,
+  rating,
+  comment,
+  date,
+}: {
+  name: string;
+  rating: number;
+  comment: string;
+  date: string;
+}) => (
+  <div className="bg-sandstone border border-gold/40 p-4">
+    <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-full bg-gold/20 flex items-center justify-center flex-shrink-0">
+          <span className="font-display text-xs text-gold">
+            {name[0]?.toUpperCase()}
+          </span>
+        </div>
+        <span className="font-display text-sm text-heritage-heading">
+          {name}
+        </span>
+        <div className="flex">
+          {Array.from({ length: 5 }).map((_, j) => (
+            <Star
+              key={j}
+              size={11}
+              fill={j < rating ? "currentColor" : "none"}
+              className={j < rating ? "text-gold" : "text-gold/25"}
+            />
+          ))}
+        </div>
+      </div>
+      <span className="font-body text-xs text-muted-foreground">{date}</span>
+    </div>
+    <p className="font-body text-sm text-muted-foreground leading-relaxed">
+      {comment}
+    </p>
+  </div>
+);
+
 const CraftsmanProfile = () => {
   const { creamBg } = useBackground();
-  const { id }      = useParams<{ id: string }>();
-  const { user }    = useAuth();
+  const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
 
-  const [craftsman,      setCraftsman]      = useState<Craftsman | null>(null);
-  const [loading,        setLoading]        = useState(true);
-  const [allCraftsmen,   setAllCraftsmen]   = useState<Craftsman[]>(craftsmen);
+  const [craftsman, setCraftsman] = useState<Craftsman | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [allCraftsmen, setAllCraftsmen] = useState<Craftsman[]>(craftsmen);
 
-  const [activeTab,      setActiveTab]      = useState<typeof tabs[number]>("About");
-  const [selectedDate,   setSelectedDate]   = useState<number | null>(null);
-  const [selectedSlot,   setSelectedSlot]   = useState<string | null>(null);
-  const [booked,         setBooked]         = useState(false);
-  const [loginOpen,      setLoginOpen]      = useState(false);
-  const [showLoginPrompt,setShowLoginPrompt]= useState(false);
-  const [lightbox,       setLightbox]       = useState<string | null>(null);
-  const [galleryIndex,   setGalleryIndex]   = useState(0);
+  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("About");
+  const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [booked, setBooked] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+
+  const [firestoreReviews, setFirestoreReviews] = useState<
+    {
+      id: string;
+      name: string;
+      rating: number;
+      comment: string;
+      date: string;
+    }[]
+  >([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  const [reviewName, setReviewName] = useState("");
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const [activeMonth, setActiveMonth] = useState(
-    new Date(today.getFullYear(), today.getMonth(), 1)
+    new Date(today.getFullYear(), today.getMonth(), 1),
   );
 
-  // ── Load craftsman ─────────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-
-      // 1. Check static array first
-      const staticMatch = craftsmen.find(c => c.id === id);
+      const staticMatch = craftsmen.find((c) => c.id === id);
       if (staticMatch) {
         setCraftsman(staticMatch);
         setLoading(false);
         return;
       }
-
-      // 2. Fetch from Firestore (approved karigar)
       try {
-        if (!id) { setLoading(false); return; }
+        if (!id) {
+          setLoading(false);
+          return;
+        }
         const snap = await getDoc(doc(db, "craftsmen", id));
         if (snap.exists()) {
           const data = snap.data();
@@ -108,30 +256,115 @@ const CraftsmanProfile = () => {
     load();
   }, [id]);
 
-  // ── Load all approved for "Recommended" section ────────────────────────────
+  useEffect(() => {
+    if (!id) return;
+    const fetchReviews = async () => {
+      setReviewsLoading(true);
+      try {
+        const snap = await getDocs(
+          query(
+            collection(db, "reviews"),
+            where("craftsmanId", "==", id),
+            orderBy("createdAt", "desc"),
+          ),
+        );
+        setFirestoreReviews(
+          snap.docs.map((d) => {
+            const data = d.data();
+            const ts = data.createdAt?.toDate?.() ?? new Date();
+            return {
+              id: d.id,
+              name: data.name || "Anonymous",
+              rating: data.rating || 5,
+              comment: data.comment || "",
+              date: ts.toLocaleDateString("en-IN", {
+                month: "short",
+                year: "numeric",
+              }),
+            };
+          }),
+        );
+      } catch (err) {
+        console.error("Failed to load reviews:", err);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+    fetchReviews();
+  }, [id]);
+
+  const handleReviewSubmit = async () => {
+    if (!user) {
+      setLoginOpen(true);
+      return;
+    }
+    if (!reviewName.trim()) return setReviewError("Please enter your name.");
+    if (reviewRating === 0)
+      return setReviewError("Please select a star rating.");
+    if (!reviewComment.trim()) return setReviewError("Please write a comment.");
+    setReviewError("");
+    setSubmitting(true);
+    try {
+      const docRef = await addDoc(collection(db, "reviews"), {
+        craftsmanId: id,
+        name: reviewName.trim(),
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+        createdAt: serverTimestamp(),
+        userId: user?.uid ?? null,
+      });
+      const newReview = {
+        id: docRef.id,
+        name: reviewName.trim(),
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+        date: new Date().toLocaleDateString("en-IN", {
+          month: "short",
+          year: "numeric",
+        }),
+      };
+      setFirestoreReviews((prev) => [newReview, ...prev]);
+      setReviewName("");
+      setReviewRating(0);
+      setReviewComment("");
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 4000);
+    } catch (err) {
+      console.error("Failed to submit review:", err);
+      setReviewError("Could not submit review. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     const loadAll = async () => {
       try {
         const snap = await getDocs(
-          query(collection(db, "craftsmen"), where("status", "==", "approved"))
+          query(collection(db, "craftsmen"), where("status", "==", "approved")),
         );
-        const fsDocs = snap.docs.map(d => mapFirestoreKarigarToCraftsman(d.id, d.data()));
+        const fsDocs = snap.docs.map((d) =>
+          mapFirestoreKarigarToCraftsman(d.id, d.data()),
+        );
         setAllCraftsmen([
           ...craftsmen,
-          ...fsDocs.filter(fc => !craftsmen.some(sc => sc.id === fc.id)),
+          ...fsDocs.filter((fc) => !craftsmen.some((sc) => sc.id === fc.id)),
         ]);
-      } catch { /* non-fatal */ }
+      } catch {
+        /* non-fatal */
+      }
     };
     loadAll();
   }, []);
 
-  // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="pt-[70px] min-h-screen bg-parchment flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-          <p className="font-body text-muted-foreground">Loading artisan profile…</p>
+          <p className="font-body text-muted-foreground">
+            Loading artisan profile…
+          </p>
         </div>
       </div>
     );
@@ -141,52 +374,68 @@ const CraftsmanProfile = () => {
     return (
       <div className="pt-[70px] min-h-screen bg-parchment flex items-center justify-center">
         <div className="text-center">
-          <p className="font-display text-xl text-heritage-heading mb-4">Artisan not found.</p>
-          <Link to="/discover" className="btn-primary text-sm">Back to Discover</Link>
+          <p className="font-display text-xl text-heritage-heading mb-4">
+            Artisan not found.
+          </p>
+          <Link to="/discover" className="btn-primary text-sm">
+            Back to Discover
+          </Link>
         </div>
       </div>
     );
   }
 
-  // ── Derived data ───────────────────────────────────────────────────────────
-  const isFirestore   = craftsman.isFirestore === true;
-  const img           = getCraftImage(craftsman.image);
-  const portfolio     = craftsman.portfolio || [];
-  const galleryImages = portfolio.length > 0 ? portfolio : [img, img, img, img];
-  const reviewCount   = Math.floor(craftsman.rating * 110 + craftsman.pricePerHour / 5);
-  const recommended   = allCraftsmen
-    .filter(c => c.id !== craftsman.id && c.region === craftsman.region)
+  const isFirestore = craftsman.isFirestore === true;
+  const img = getCraftImage(craftsman.image);
+  const portfolio = craftsman.portfolio || [];
+  const galleryImages =
+    portfolio.length > 0 ? portfolio.slice(0, 5) : [img, img, img, img];
+  const reviewCount = firestoreReviews.length || STATIC_REVIEWS.length;
+  const displayedReviews =
+    firestoreReviews.length > 0 ? firestoreReviews : STATIC_REVIEWS;
+
+  const recommended = allCraftsmen
+    .filter((c) => c.id !== craftsman.id && c.region === craftsman.region)
     .slice(0, 3);
 
   const slots = ["10:00 AM", "11:30 AM", "2:00 PM", "3:30 PM", "5:00 PM"];
 
-  // Calendar helpers
-  const year       = activeMonth.getFullYear();
-  const month      = activeMonth.getMonth();
-  const firstDay   = new Date(year, month, 1).getDay();
+  const year = activeMonth.getFullYear();
+  const month = activeMonth.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const calendarCells: (Date | null)[] = [
     ...Array(firstDay).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1)),
+    ...Array.from(
+      { length: daysInMonth },
+      (_, i) => new Date(year, month, i + 1),
+    ),
   ];
-  const isPast     = (d: Date) => d < today;
+  const isPast = (d: Date) => d < today;
   const isSelected = (d: Date) =>
     selectedDate !== null &&
     d.getDate() === selectedDate &&
     d.getMonth() === month &&
     d.getFullYear() === year;
 
-  const confirmedDate = selectedDate !== null
-    ? new Date(year, month, selectedDate).toLocaleDateString("en-IN", {
-        weekday: "long", day: "numeric", month: "long", year: "numeric",
-      })
-    : "";
+  const confirmedDate =
+    selectedDate !== null
+      ? new Date(year, month, selectedDate).toLocaleDateString("en-IN", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      : "";
 
   const handleConfirm = () => {
     if (selectedDate === null || !selectedSlot) return;
     if (!user) {
       setShowLoginPrompt(true);
-      setTimeout(() => { setShowLoginPrompt(false); setLoginOpen(true); }, 1800);
+      setTimeout(() => {
+        setShowLoginPrompt(false);
+        setLoginOpen(true);
+      }, 1800);
       return;
     }
     setBooked(true);
@@ -195,7 +444,6 @@ const CraftsmanProfile = () => {
   const isVideo = (url: string) =>
     /\.(mp4|mov|webm|avi|mkv)/i.test(url) || url.includes("/video/upload/");
 
-  // ── RENDER ─────────────────────────────────────────────────────────────────
   return (
     <div className="pt-[70px] min-h-screen" style={creamBg}>
       {/* ── HEADER ── */}
@@ -296,7 +544,6 @@ const CraftsmanProfile = () => {
       {/* ── PHOTO GALLERY ── */}
       <div className="container-heritage px-4">
         <div className="grid grid-cols-[2fr_1fr_1fr] grid-rows-2 h-[420px] gap-1 my-4">
-          {/* Large left — cover */}
           <div className="col-span-1 row-span-2 overflow-hidden relative group">
             {isVideo(galleryImages[0]) ? (
               <video
@@ -315,7 +562,6 @@ const CraftsmanProfile = () => {
               />
             )}
           </div>
-          {/* Top-right */}
           <img
             src={galleryImages[1] || img}
             alt={craftsman.craft}
@@ -326,7 +572,6 @@ const CraftsmanProfile = () => {
             alt={craftsman.craft}
             className="w-full h-full object-cover"
           />
-          {/* Bottom-right */}
           <img
             src={galleryImages[3] || img}
             alt={craftsman.craft}
@@ -383,7 +628,7 @@ const CraftsmanProfile = () => {
               key="about"
             >
               <div className="grid grid-cols-1 md:grid-cols-[1fr_260px] gap-8 mb-8">
-                {/* LEFT — story, materials, specialties, techniques */}
+                {/* LEFT */}
                 <div>
                   <h3 className="font-display text-lg text-heritage-heading mb-3">
                     Story
@@ -448,44 +693,151 @@ const CraftsmanProfile = () => {
                     ))}
                   </div>
 
-                  {/* Reviews */}
-                  <h3 className="font-display text-lg text-heritage-heading mb-4">
-                    Reviews{" "}
-                    <span className="text-gold text-sm font-body normal-case">
-                      ({reviews.length})
-                    </span>
-                  </h3>
-                  <div className="space-y-4">
-                    {reviews.map((r, i) => (
-                      <div
-                        key={i}
-                        className="bg-sandstone border border-gold p-4"
-                      >
-                        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-display text-sm text-heritage-heading">
-                              {r.name}
-                            </span>
-                            <div className="flex">
-                              {Array.from({ length: r.rating }).map((_, j) => (
-                                <Star
-                                  key={j}
-                                  size={11}
-                                  fill="currentColor"
-                                  className="text-gold"
-                                />
-                              ))}
-                            </div>
-                          </div>
-                          <span className="font-body text-xs text-muted-foreground">
-                            {r.date}
-                          </span>
-                        </div>
-                        <p className="font-body text-sm text-muted-foreground">
-                          {r.comment}
-                        </p>
+                  {/* ── Reviews ── */}
+                  <div className="border-t border-gold/20 pt-8">
+                    <div className="flex items-center justify-between mb-5">
+                      <h3 className="font-display text-lg text-heritage-heading flex items-center gap-2">
+                        <MessageSquare size={16} className="text-gold" />
+                        Reviews
+                        <span className="text-gold text-sm font-body normal-case">
+                          ({displayedReviews.length})
+                        </span>
+                      </h3>
+                    </div>
+
+                    {reviewsLoading ? (
+                      <div className="flex items-center gap-2 py-6 text-muted-foreground">
+                        <div className="w-4 h-4 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                        <span className="font-body text-sm">
+                          Loading reviews…
+                        </span>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="space-y-3 mb-8">
+                        {displayedReviews.map((r, i) => (
+                          <ReviewCard
+                            key={"id" in r ? r.id : i}
+                            name={r.name}
+                            rating={r.rating}
+                            comment={r.comment}
+                            date={r.date}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* ── Write a Review ── */}
+                    <div className="border border-gold/30 bg-sandstone/40 p-5">
+                      <h4 className="font-display text-sm uppercase tracking-[2px] text-heritage-heading mb-4 flex items-center gap-2">
+                        <Star size={13} className="text-gold" /> Write a Review
+                      </h4>
+
+                      <AnimatePresence mode="wait">
+                        {/* ── NOT LOGGED IN: show sign-in prompt ── */}
+                        {!user ? (
+                          <motion.div
+                            key="login-gate"
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="flex flex-col items-start gap-3 py-2"
+                          >
+                            <p className="font-body text-sm text-muted-foreground">
+                              Please sign in to share your experience with this
+                              artisan.
+                            </p>
+                            <button
+                              onClick={() => setLoginOpen(true)}
+                              className="inline-flex items-center gap-2 btn-primary px-5 py-2.5 text-sm"
+                            >
+                              <LogIn size={14} /> Sign in to Review
+                            </button>
+                          </motion.div>
+                        ) : submitted ? (
+                          /* ── SUCCESS STATE ── */
+                          <motion.div
+                            key="thanks"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="flex items-center gap-3 py-4 text-green-700"
+                          >
+                            <Check size={18} />
+                            <p className="font-body text-sm">
+                              Thank you — your review has been posted!
+                            </p>
+                          </motion.div>
+                        ) : (
+                          /* ── REVIEW FORM ── */
+                          <motion.div
+                            key="form"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                          >
+                            {/* Name */}
+                            <div className="mb-4">
+                              <label className="font-body text-[10px] uppercase tracking-[1.5px] text-muted-foreground mb-1.5 block">
+                                Your Name <span className="text-gold">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={reviewName}
+                                onChange={(e) => setReviewName(e.target.value)}
+                                placeholder="e.g. Priya Sharma"
+                                className="w-full bg-white border border-gold/35 px-3 py-2.5 font-body text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-gold/70 focus:ring-1 focus:ring-gold/20 transition-all"
+                              />
+                            </div>
+
+                            {/* Star Rating */}
+                            <div className="mb-4">
+                              <label className="font-body text-[10px] uppercase tracking-[1.5px] text-muted-foreground mb-2 block">
+                                Rating <span className="text-gold">*</span>
+                              </label>
+                              <StarPicker
+                                value={reviewRating}
+                                onChange={setReviewRating}
+                              />
+                            </div>
+
+                            {/* Comment */}
+                            <div className="mb-4">
+                              <label className="font-body text-[10px] uppercase tracking-[1.5px] text-muted-foreground mb-1.5 block">
+                                Your Review <span className="text-gold">*</span>
+                              </label>
+                              <textarea
+                                rows={3}
+                                value={reviewComment}
+                                onChange={(e) =>
+                                  setReviewComment(e.target.value)
+                                }
+                                placeholder="Share your experience with this artisan…"
+                                className="w-full bg-white border border-gold/35 px-3 py-2.5 font-body text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-gold/70 focus:ring-1 focus:ring-gold/20 transition-all resize-none"
+                              />
+                            </div>
+
+                            {reviewError && (
+                              <p className="font-body text-xs text-red-500 mb-3">
+                                {reviewError}
+                              </p>
+                            )}
+
+                            <button
+                              onClick={handleReviewSubmit}
+                              disabled={submitting}
+                              className="inline-flex items-center gap-2 btn-primary px-5 py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {submitting ? (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Send size={14} />
+                              )}
+                              {submitting ? "Posting…" : "Post Review"}
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </div>
                 </div>
 
@@ -506,7 +858,7 @@ const CraftsmanProfile = () => {
                           {craftsman.region ? `, ${craftsman.region}` : ""}
                         </span>
                       </div>
-                      {craftsman.phone && (
+                      {craftsman.phone ? (
                         <div className="flex items-center gap-3">
                           <Phone
                             size={13}
@@ -519,8 +871,7 @@ const CraftsmanProfile = () => {
                             +91 {craftsman.phone}
                           </a>
                         </div>
-                      )}
-                      {!craftsman.phone && (
+                      ) : (
                         <div className="flex items-center gap-3">
                           <Phone
                             size={13}
@@ -531,7 +882,7 @@ const CraftsmanProfile = () => {
                           </span>
                         </div>
                       )}
-                      {craftsman.email && (
+                      {craftsman.email ? (
                         <div className="flex items-center gap-3">
                           <Mail size={13} className="text-gold flex-shrink-0" />
                           <a
@@ -541,8 +892,7 @@ const CraftsmanProfile = () => {
                             {craftsman.email}
                           </a>
                         </div>
-                      )}
-                      {!craftsman.email && (
+                      ) : (
                         <div className="flex items-center gap-3">
                           <Mail size={13} className="text-gold flex-shrink-0" />
                           <span className="font-body text-sm text-muted-foreground">
@@ -567,7 +917,6 @@ const CraftsmanProfile = () => {
                     </div>
                   </div>
 
-                  {/* Social Links — only for Firestore karigar */}
                   {(craftsman.instagram ||
                     craftsman.facebook ||
                     craftsman.youtube) && (
@@ -634,7 +983,6 @@ const CraftsmanProfile = () => {
                     </div>
                   )}
 
-                  {/* Workshop */}
                   <div className="bg-sandstone border border-gold p-5">
                     <h4 className="font-display text-sm uppercase tracking-[2px] text-heritage-heading mb-3">
                       Workshop
@@ -646,7 +994,6 @@ const CraftsmanProfile = () => {
                     </p>
                   </div>
 
-                  {/* Map */}
                   <div className="bg-sandstone border border-gold overflow-hidden">
                     <h4 className="font-display text-sm uppercase tracking-[2px] text-heritage-heading p-4 pb-2">
                       Location
@@ -682,30 +1029,17 @@ const CraftsmanProfile = () => {
                     {portfolio.length !== 1 ? "s" : ""} — click any to view full
                     size.
                   </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {portfolio.map((url, i) => (
-                      <motion.div
+                      <button
                         key={i}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.04 }}
-                        className="relative group aspect-square overflow-hidden border border-gold/35 cursor-zoom-in"
-                        onClick={() => !isVideo(url) && setLightbox(url)}
+                        onClick={() => setLightbox(url)}
+                        className="relative aspect-square overflow-hidden group border border-gold/20"
                       >
                         {isVideo(url) ? (
-                          <video
-                            src={url}
-                            className="w-full h-full object-cover"
-                            muted
-                            playsInline
-                            onMouseOver={(e) =>
-                              (e.target as HTMLVideoElement).play()
-                            }
-                            onMouseOut={(e) => {
-                              (e.target as HTMLVideoElement).pause();
-                              (e.target as HTMLVideoElement).currentTime = 0;
-                            }}
-                          />
+                          <div className="w-full h-full bg-ink flex items-center justify-center">
+                            <Play size={28} className="text-white/70" />
+                          </div>
                         ) : (
                           <img
                             src={url}
@@ -713,79 +1047,22 @@ const CraftsmanProfile = () => {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         )}
-                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Eye size={20} className="text-white" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                          <Eye
+                            size={20}
+                            className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          />
                         </div>
-                        {i === 0 && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-primary/85 text-white text-center font-body text-[9px] uppercase tracking-wider py-1">
-                            Cover
-                          </div>
-                        )}
-                      </motion.div>
+                      </button>
                     ))}
                   </div>
-
-                  {/* Certificates */}
-                  {craftsman.certificates &&
-                    craftsman.certificates.length > 0 && (
-                      <div className="mt-10">
-                        <h3 className="font-display text-lg text-heritage-heading mb-4 flex items-center gap-2">
-                          <Award size={18} className="text-gold" /> Awards &
-                          Certificates
-                        </h3>
-                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-                          {craftsman.certificates.map((url, i) => (
-                            <div
-                              key={i}
-                              className="relative group aspect-square border border-gold/35 overflow-hidden cursor-zoom-in"
-                              onClick={() => setLightbox(url)}
-                            >
-                              <img
-                                src={url}
-                                alt={`Certificate ${i + 1}`}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                              />
-                              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <Eye size={16} className="text-white" />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                 </>
               ) : (
-                /* Fallback for static artisans — show placeholder video grid */
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                >
-                  {["The Making Process", "Workshop Tour", "Interview"].map(
-                    (title) => (
-                      <div
-                        key={title}
-                        className="relative bg-sandstone border border-gold overflow-hidden group cursor-pointer"
-                      >
-                        <img
-                          src={img}
-                          alt={title}
-                          className="w-full h-40 object-cover opacity-70 group-hover:opacity-90 transition-opacity"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-gold">
-                            <Play size={20} fill="currentColor" />
-                          </div>
-                        </div>
-                        <div className="p-3">
-                          <p className="font-display text-sm text-heritage-heading">
-                            {title}
-                          </p>
-                        </div>
-                      </div>
-                    ),
-                  )}
-                </motion.div>
+                <div className="text-center py-16 border border-gold/20">
+                  <p className="font-body text-muted-foreground">
+                    No portfolio items yet.
+                  </p>
+                </div>
               )}
             </motion.div>
           )}
@@ -819,12 +1096,10 @@ const CraftsmanProfile = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-8">
-                  {/* Calendar */}
                   <div>
                     <h3 className="font-display text-lg text-heritage-heading mb-4">
                       Select a Date
                     </h3>
-                    {/* Month nav */}
                     <div className="flex items-center justify-between mb-4">
                       <button
                         onClick={() =>
@@ -849,7 +1124,6 @@ const CraftsmanProfile = () => {
                         <ChevronRight size={16} />
                       </button>
                     </div>
-                    {/* Days grid */}
                     <div className="grid grid-cols-7 gap-1 mb-2">
                       {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
                         <div
@@ -888,7 +1162,6 @@ const CraftsmanProfile = () => {
                     </div>
                   </div>
 
-                  {/* Slot picker + confirm */}
                   <div>
                     <h3 className="font-display text-lg text-heritage-heading mb-4">
                       Select a Time
@@ -940,7 +1213,6 @@ const CraftsmanProfile = () => {
           )}
         </div>
 
-        {/* ── Recommended ── */}
         {recommended.length > 0 && (
           <div className="mb-16">
             <h2 className="font-display text-2xl text-heritage-heading mb-2">
@@ -959,7 +1231,6 @@ const CraftsmanProfile = () => {
         )}
       </div>
 
-      {/* ── Lightbox ── */}
       <AnimatePresence>
         {lightbox && (
           <Lightbox src={lightbox} onClose={() => setLightbox(null)} />
