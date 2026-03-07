@@ -36,6 +36,7 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
+import { optimizeCloudinaryUrl } from "@/lib/craftImages";
 
 // ─── Textures ─────────────────────────────────────────────────────────────────
 const MANDALA_BG = `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23c9a227' stroke-opacity='0.07' stroke-width='0.8'%3E%3Ccircle cx='30' cy='30' r='22'/%3E%3Ccircle cx='30' cy='30' r='15'/%3E%3Ccircle cx='30' cy='30' r='8'/%3E%3Cline x1='30' y1='8' x2='30' y2='52'/%3E%3Cline x1='8' y1='30' x2='52' y2='30'/%3E%3Cline x1='14' y1='14' x2='46' y2='46'/%3E%3Cline x1='46' y1='14' x2='14' y2='46'/%3E%3C/g%3E%3C/svg%3E")`;
@@ -989,8 +990,9 @@ export default function KarigarProfile() {
                     >
                       <a href={url} target="_blank" rel="noopener noreferrer">
                         <img
-                          src={url}
+                          src={optimizeCloudinaryUrl(url, 600, 600)}
                           alt={`Work ${i + 1}`}
+                          loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </a>

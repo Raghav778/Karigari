@@ -53,3 +53,21 @@ export const getCraftImage = (key: string): string => {
   }
   return imageMap[key] ?? craftPottery;
 };
+
+export const optimizeCloudinaryUrl = (
+  url: string,
+  width = 800,
+  height?: number,
+): string => {
+  if (!url || !url.includes("res.cloudinary.com")) return url;
+  const transforms = [
+    `w_${width}`,
+    height ? `h_${height}` : null,
+    "c_fill",
+    "q_auto",
+    "f_auto",
+  ]
+    .filter(Boolean)
+    .join(",");
+  return url.replace("/upload/", `/upload/${transforms}/`);
+};
