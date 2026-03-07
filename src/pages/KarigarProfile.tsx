@@ -12,14 +12,7 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-} from "firebase/storage";
-import { auth, db } from "../firebase";
+import { auth, db, storage } from "../firebase";
 import {
   LayoutDashboard,
   MapPin,
@@ -325,32 +318,31 @@ export default function KarigarProfile() {
   const portfolioRef = useRef<HTMLInputElement>(null);
   const hasLoaded = useRef(false);
 
-
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // ── Fetch karigar doc ──────────────────────────────────────────────────────
-useEffect(() => {
-  const unsub = onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      navigate("/", { state: { openLogin: true } });
-      return;
-    }
-    if (hasLoaded.current) return; // ← prevent re-fetch from overwriting edits
-    const snap = await getDocs(
-      query(collection(db, "craftsmen"), where("userId", "==", user.uid)),
-    );
-    if (snap.empty) {
-      navigate("/join");
-      return;
-    }
-    setDocId(snap.docs[0].id);
-    setKarigar(snap.docs[0].data() as KarigarData);
-    setLoading(false);
-    hasLoaded.current = true; // ← mark as loaded
-  });
-  return () => unsub();
-}, [navigate]);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        navigate("/", { state: { openLogin: true } });
+        return;
+      }
+      if (hasLoaded.current) return; // ← prevent re-fetch from overwriting edits
+      const snap = await getDocs(
+        query(collection(db, "craftsmen"), where("userId", "==", user.uid)),
+      );
+      if (snap.empty) {
+        navigate("/join");
+        return;
+      }
+      setDocId(snap.docs[0].id);
+      setKarigar(snap.docs[0].data() as KarigarData);
+      setLoading(false);
+      hasLoaded.current = true; // ← mark as loaded
+    });
+    return () => unsub();
+  }, [navigate]);
 
   // ── Edit helpers ───────────────────────────────────────────────────────────
   const startEdit = () => {
@@ -395,6 +387,20 @@ useEffect(() => {
   };
 
   // ── Portfolio upload ───────────────────────────────────────────────────────
+  // ── Portfolio upload ───────────────────────────────────────────────────────
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "karigarh_unsigned");
+    const res = await fetch(
+      "https://api.cloudinary.com/v1_1/dbzo2oidq/image/upload",
+      { method: "POST", body: formData },
+    );
+    if (!res.ok) throw new Error("Cloudinary upload failed");
+    const data = await res.json();
+    return data.secure_url;
+  };
+
   const handlePortfolioUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -402,15 +408,10 @@ useEffect(() => {
     if (!files.length || !docId) return;
     setUploadingPortfolio(true);
     try {
-      const storage = getStorage();
       const urls: string[] = [];
       for (const file of files) {
-        const r = storageRef(
-          storage,
-          `portfolios/${docId}/${Date.now()}_${file.name}`,
-        );
-        await uploadBytes(r, file);
-        urls.push(await getDownloadURL(r));
+        const url = await uploadToCloudinary(file);
+        urls.push(url);
       }
       const newPortfolio = [...(karigar?.portfolio ?? []), ...urls];
       await updateDoc(doc(db, "craftsmen", docId), { portfolio: newPortfolio });
@@ -427,11 +428,6 @@ useEffect(() => {
   const removePortfolioImage = async (url: string, idx: number) => {
     if (!docId) return;
     try {
-      try {
-        await deleteObject(storageRef(getStorage(), url));
-      } catch {
-        /* external url, skip */
-      }
       const newPortfolio = (karigar?.portfolio ?? []).filter(
         (_, i) => i !== idx,
       );
