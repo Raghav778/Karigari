@@ -166,7 +166,12 @@ const Discover = () => {
   const activeCraftName = craftFilter !== "All" ? craftFilter : null;
 
   // ── Artisan filtering ────────────────────────────────────────────────────
-  const allArtisans = [...craftsmen, ...firestoreArtisans];
+  const allArtisans = [
+  ...craftsmen,
+  ...firestoreCraftsmen.filter(
+    (fc) => !craftsmen.some((sc) => sc.id === fc.id)
+  ),
+];
 
   const filtered = allArtisans.filter((c) => {
     if (regionFilter !== "All" && c.region !== regionFilter) return false;

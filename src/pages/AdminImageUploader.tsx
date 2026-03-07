@@ -122,6 +122,7 @@ export default function AdminImageUploader() {
     try {
       await updateDoc(doc(db, "craftsmen", selected.id), {
         portfolio: newPortfolio,
+        image: newPortfolio[0],
       });
       setUploadLog((prev) => [
         ...prev,
