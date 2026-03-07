@@ -1,0 +1,47 @@
+.craft-card-3d {
+  perspective: 1000px;
+}
+
+.craft-card-inner {
+  position: relative;
+  width: 100%;
+  transition: transform 1200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform-style: preserve-3d;
+}
+
+/* Flip is now controlled only by JS adding/removing this class */
+.craft-card-inner.craft-card-flipped {
+  transform: rotateY(180deg);
+}
+
+.craft-card-front,
+.craft-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.craft-card-front {
+  transform: rotateY(0deg);
+}
+
+.craft-card-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(135deg, hsl(35 80% 42%), hsl(28 85% 48%), hsl(20 90% 50%), hsl(15 85% 45%));
+  
+}
+
+.dark .craft-card-back {
+  background: none;
+  background-image: url('/dark-back2.png');
+  background-repeat: repeat;
+  background-size: 600px auto;
+}
+
+.dark .craft-card-3d {
+  background: hsl(28 12% 14%) !important;
+}
