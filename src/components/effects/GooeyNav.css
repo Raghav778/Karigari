@@ -25,11 +25,7 @@
   margin: 0;
   position: relative;
   z-index: 3;
-<<<<<<< HEAD
   color: black;
-=======
-  color: hsl(20 40% 8%);
->>>>>>> 168d6e43618d51f20de936c6c1f703e981c9f627
   text-shadow: none;
 }
 
@@ -39,11 +35,7 @@
   cursor: pointer;
   transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
   box-shadow: 0 0 0.5px 1.5px transparent;
-<<<<<<< HEAD
   color: black;
-=======
-  color: hsl(20 40% 8%);
->>>>>>> 168d6e43618d51f20de936c6c1f703e981c9f627
 }
 
 .gooey-nav-container nav ul li a {
@@ -97,11 +89,7 @@
 }
 
 .gooey-nav-container .effect.text {
-<<<<<<< HEAD
   color: black;
-=======
-  color: hsl(20 40% 8%);
->>>>>>> 168d6e43618d51f20de936c6c1f703e981c9f627
   transition: color 0.3s ease;
   font-family: 'Cinzel', serif;
   font-size: 0.7rem;
@@ -158,7 +146,6 @@
   height: calc(var(--r) * 1px);
   border-radius: 50%;
   position: absolute;
-<<<<<<< HEAD
   top: calc(50% - 8px);
   left: calc(50% - 8px);
   animation: particle calc(var(--time)) ease 1 -350ms;
@@ -217,9 +204,3 @@
     opacity: 0;
   }
 }
-=======
-  left: 0;
-  top: 0;
-  will-change: transform, opacity;
-}
->>>>>>> 168d6e43618d51f20de936c6c1f703e981c9f627
