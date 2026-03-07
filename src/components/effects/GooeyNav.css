@@ -25,7 +25,7 @@
   margin: 0;
   position: relative;
   z-index: 3;
-  color: white;
+  color: black;
   text-shadow: none;
 }
 
@@ -35,7 +35,7 @@
   cursor: pointer;
   transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
   box-shadow: 0 0 0.5px 1.5px transparent;
-  color: white;
+  color: black;
 }
 
 .gooey-nav-container nav ul li a {
@@ -89,7 +89,7 @@
 }
 
 .gooey-nav-container .effect.text {
-  color: white;
+  color: black;
   transition: color 0.3s ease;
   font-family: 'Cinzel', serif;
   font-size: 0.7rem;

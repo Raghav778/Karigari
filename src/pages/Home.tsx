@@ -543,7 +543,7 @@ const Home = () => {
             className="w-full max-w-4xl mx-auto"
           >
             <h1
-              className="font-display text-5xl md:text-7xl lg:text-8xl text-white"
+              className="font-display text-3xl md:text-5xl lg:text-6xl text-white"
               style={{ marginTop: "-75px", marginBottom: "calc(1.5rem + 40px)" }}
             >
               {t.home.heroTitle.split("\n").map((line, i, arr) => (

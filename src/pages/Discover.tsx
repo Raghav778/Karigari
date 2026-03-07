@@ -9,10 +9,8 @@ import {
 import CraftsmanCard from "@/components/CraftsmanCard";
 import {
   X,
-  Search,
   SlidersHorizontal,
   ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { useBackground } from "@/hooks/useBackground";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,10 +23,8 @@ const Discover = () => {
   const [regionFilter, setRegionFilter] = useState<string>("All");
   // craftFilter stores the craft NAME string (e.g. "Blue Pottery"), not an ID
   const [craftFilter, setCraftFilter] = useState<string>("All");
-  const [search, setSearch] = useState("");
+
   const [filterOpen, setFilterOpen] = useState(false);
-  const [regionOpen, setRegionOpen] = useState(true);
-  const [craftsOpen, setCraftsOpen] = useState(true);
 
   const { creamBg } = useBackground();
 
@@ -175,13 +171,6 @@ const Discover = () => {
   const filtered = allArtisans.filter((c) => {
     if (regionFilter !== "All" && c.region !== regionFilter) return false;
     if (craftFilter !== "All" && c.craft !== craftFilter) return false;
-    if (
-      search &&
-      !c.name.toLowerCase().includes(search.toLowerCase()) &&
-      !c.craft.toLowerCase().includes(search.toLowerCase()) &&
-      !c.location.toLowerCase().includes(search.toLowerCase())
-    )
-      return false;
     return true;
   });
 
@@ -190,12 +179,11 @@ const Discover = () => {
     activeCraftName ?? null,
   ].filter(Boolean);
 
-  const totalActiveFilters = activeFilters.length + (search ? 1 : 0);
+  const totalActiveFilters = activeFilters.length;
 
   const clearAll = () => {
     setRegionFilter("All");
     setCraftFilter("All");
-    setSearch("");
   };
 
   return (
@@ -203,10 +191,7 @@ const Discover = () => {
       {/* ── Hero ── */}
       <section className="pt-[70px] pb-10 px-4 border-b border-gold/20">
         <div className="container-heritage">
-          <div className="pt-10 pb-4">
-            <p className="font-body text-xs uppercase tracking-[3px] text-gold mb-3">
-              Discover
-            </p>
+          <div className="pt-6 pb-4">
             <h1 className="font-display text-4xl md:text-5xl text-heritage-heading mb-3">
               India's Master Artisans
             </h1>
@@ -216,25 +201,48 @@ const Discover = () => {
             </p>
           </div>
 
-          {/* Search bar */}
-          <div className="relative max-w-xl mt-6">
-            <Search
-              size={15}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none"
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, craft, or location…"
-              className="w-full bg-white border border-gold/35 pl-10 pr-4 py-3 font-body text-sm focus:outline-none focus:border-gold/70 focus:ring-2 focus:ring-gold/20 transition-all"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          {/* Filter dropdowns */}
+          <div className="flex flex-wrap gap-3 mt-6">
+            {/* Region dropdown */}
+            <div className="relative">
+              <select
+                value={regionFilter}
+                onChange={(e) => handleRegionChange(e.target.value)}
+                className="appearance-none bg-white border border-gold/40 pl-4 pr-9 py-2.5 font-body text-sm text-heritage-heading focus:outline-none focus:border-gold/70 focus:ring-2 focus:ring-gold/20 transition-all cursor-pointer dark:bg-sandstone dark:text-foreground"
               >
-                <X size={14} />
+                {regions.map((r) => (
+                  <option key={r} value={r}>
+                    {r === "All" ? "All Regions" : r}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={13} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            </div>
+
+            {/* Craft Form dropdown */}
+            <div className="relative">
+              <select
+                value={craftFilter}
+                onChange={(e) => setCraftFilter(e.target.value)}
+                className="appearance-none bg-white border border-gold/40 pl-4 pr-9 py-2.5 font-body text-sm text-heritage-heading focus:outline-none focus:border-gold/70 focus:ring-2 focus:ring-gold/20 transition-all cursor-pointer dark:bg-sandstone dark:text-foreground"
+              >
+                <option value="All">All Craft Forms</option>
+                {visibleCraftEntries.map((c) => (
+                  <option key={c.name} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={13} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            </div>
+
+            {/* Clear filters */}
+            {totalActiveFilters > 0 && (
+              <button
+                onClick={clearAll}
+                className="flex items-center gap-1.5 font-body text-xs text-muted-foreground hover:text-foreground border border-gold/30 px-3 py-2.5 hover:bg-sandstone transition-all"
+              >
+                <X size={11} /> Clear filters
               </button>
             )}
           </div>
@@ -244,102 +252,6 @@ const Discover = () => {
       {/* ── Body ── */}
       <section className="container-heritage px-4 py-10">
         <div className="flex gap-10 items-start">
-          {/* ── Sidebar Filters ── */}
-          <aside className="hidden lg:block w-56 flex-shrink-0 sticky top-[90px]">
-            {/* Region */}
-            <div className="mb-6">
-              <button
-                onClick={() => setRegionOpen((p) => !p)}
-                className="flex items-center justify-between w-full font-display text-xs uppercase tracking-[2px] text-heritage-heading mb-3"
-              >
-                Region{" "}
-                {regionOpen ? (
-                  <ChevronUp size={13} />
-                ) : (
-                  <ChevronDown size={13} />
-                )}
-              </button>
-              <AnimatePresence>
-                {regionOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="space-y-1">
-                      {regions.map((r) => (
-                        <button
-                          key={r}
-                          onClick={() => handleRegionChange(r)}
-                          className={`w-full text-left font-body text-sm px-3 py-2 transition-all ${
-                            regionFilter === r
-                              ? "bg-primary text-primary-foreground"
-                              : "text-muted-foreground hover:text-foreground hover:bg-sandstone"
-                          }`}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Craft Form */}
-            <div>
-              <button
-                onClick={() => setCraftsOpen((p) => !p)}
-                className="flex items-center justify-between w-full font-display text-xs uppercase tracking-[2px] text-heritage-heading mb-3"
-              >
-                Craft Form{" "}
-                {craftsOpen ? (
-                  <ChevronUp size={13} />
-                ) : (
-                  <ChevronDown size={13} />
-                )}
-              </button>
-              <AnimatePresence>
-                {craftsOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="space-y-1">
-                      <button
-                        onClick={() => setCraftFilter("All")}
-                        className={`w-full text-left font-body text-sm px-3 py-2 transition-all ${
-                          craftFilter === "All"
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:text-foreground hover:bg-sandstone"
-                        }`}
-                      >
-                        All Crafts
-                      </button>
-                      {/* Dynamic: static crafts + any NEW craft forms submitted by karigar */}
-                      {visibleCraftEntries.map((c) => (
-                        <button
-                          key={c.name}
-                          onClick={() => setCraftFilter(c.name)}
-                          className={`w-full text-left font-body text-sm px-3 py-2 transition-all ${
-                            craftFilter === c.name
-                              ? "bg-primary text-primary-foreground"
-                              : "text-muted-foreground hover:text-foreground hover:bg-sandstone"
-                          }`}
-                        >
-                          {c.name}
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </aside>
-
           {/* ── Results ── */}
           <div className="flex-1 min-w-0">
             {/* Mobile filter toggle */}
@@ -443,7 +355,7 @@ const Discover = () => {
             )}
 
             {/* Count */}
-            {(filtered.length > 0 || search) && (
+            {filtered.length > 0 && (
               <p className="font-body text-sm text-muted-foreground mb-5">
                 <span className="text-heritage-heading font-semibold">
                   {filtered.length}
