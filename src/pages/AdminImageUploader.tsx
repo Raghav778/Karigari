@@ -1,23 +1,3 @@
-/**
- * AdminImageUploader.tsx
- * ─────────────────────────────────────────────────────────────────
- * TEMPORARY ADMIN PAGE — Upload images for seeded craftsmen.
- *
- * STEP 1: Add to your routes:
- *   import AdminImageUploader from "./pages/AdminImageUploader";
- *   <Route path="/admin-images" element={<AdminImageUploader />} />
- *
- * STEP 2: Visit http://localhost:5173/admin-images
- *
- * STEP 3: Pick a craftsman → upload 6–7 images → Save.
- *         Images go to Cloudinary; URLs are written to Firestore.
- *
- * STEP 4: Repeat for each craftsman.
- *
- * STEP 5: Remove this route and file when done.
- * ─────────────────────────────────────────────────────────────────
- */
-
 import { useState, useEffect, useRef } from "react";
 import {
   collection,
