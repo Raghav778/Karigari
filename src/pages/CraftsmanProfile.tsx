@@ -54,24 +54,24 @@ const tabs = ["About", "Portfolio", "Booking"] as const;
 
 const STATIC_REVIEWS = [
   {
+    id: "static-1",
     name: "Priya Sharma",
     rating: 5,
-    comment:
-      "An absolutely transformative experience. The knowledge and patience made this a once-in-a-lifetime workshop.",
+    comment: "An absolutely transformative experience...",
     date: "Jan 2025",
   },
   {
+    id: "static-2",
     name: "Arjun Mehta",
     rating: 5,
-    comment:
-      "Watching the craft come alive was magical. Highly recommend to anyone visiting.",
+    comment: "Watching the craft come alive was magical...",
     date: "Dec 2024",
   },
   {
+    id: "static-3",
     name: "Sara Thompson",
     rating: 4,
-    comment:
-      "Incredible skill and a warm, welcoming host. The session flew by far too quickly.",
+    comment: "Incredible skill and a warm, welcoming host...",
     date: "Nov 2024",
   },
 ];
@@ -716,13 +716,13 @@ const CraftsmanProfile = () => {
                       <div className="space-y-3 mb-8">
                         {displayedReviews.map((r, i) => (
                           <ReviewCard
-                            key={"id" in r ? r.id : i}
+                            key = {"id" in r ? r.id : i}
                             name={r.name}
                             rating={r.rating}
                             comment={r.comment}
                             date={r.date}
                           />
-                        ))}
+                        ))} 
                       </div>
                     )}
 
