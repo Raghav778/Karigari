@@ -2,11 +2,7 @@ import { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 
-// ─── Raw seed data ────────────────────────────────────────────────────────────
 const CRAFTSMEN_DATA = [
-  // ══════════════════════════════════════════════════════════════════
-  //  BLUE POTTERY — Rajasthan (Jaipur / Sanganer)
-  // ══════════════════════════════════════════════════════════════════
   {
     personal: {
       name: "Rameshwar Prajapat",
@@ -357,10 +353,6 @@ const CRAFTSMEN_DATA = [
     portfolio: [],
     status: "approved",
   },
-
-  // ══════════════════════════════════════════════════════════════════
-  //  BANDHANI — Rajasthan (Jodhpur / Barmer / Sikar)
-  // ══════════════════════════════════════════════════════════════════
   {
     personal: {
       name: "Salim Khatri",
@@ -528,9 +520,6 @@ const CRAFTSMEN_DATA = [
     status: "approved",
   },
 
-  // ══════════════════════════════════════════════════════════════════
-  //  MEENAKARI — Rajasthan (Jaipur)
-  // ══════════════════════════════════════════════════════════════════
   {
     personal: {
       name: "Suresh Soni",
@@ -834,10 +823,6 @@ const CRAFTSMEN_DATA = [
     portfolio: [],
     status: "approved",
   },
-
-  // ══════════════════════════════════════════════════════════════════
-  //  GOND ART — Madhya Pradesh (Mandla / Bhopal / Balaghat)
-  // ══════════════════════════════════════════════════════════════════
   {
     personal: {
       name: "Jangarh Ram Shyam",
@@ -1007,10 +992,6 @@ const CRAFTSMEN_DATA = [
     portfolio: [],
     status: "approved",
   },
-
-  // ══════════════════════════════════════════════════════════════════
-  //  BAGH PRINT — Madhya Pradesh (Dhar / Bagh village)
-  // ══════════════════════════════════════════════════════════════════
   {
     personal: {
       name: "Mohammed Yusuf Khatri",
@@ -1170,10 +1151,6 @@ const CRAFTSMEN_DATA = [
     portfolio: [],
     status: "approved",
   },
-
-  // ══════════════════════════════════════════════════════════════════
-  //  CHANDERI WEAVING — Madhya Pradesh (Chanderi / Ashoknagar)
-  // ══════════════════════════════════════════════════════════════════
   {
     personal: {
       name: "Anwar Khan",
@@ -1340,7 +1317,6 @@ const CRAFTSMEN_DATA = [
   },
 ];
 
-// ─── Component ─────────────────────────────────────────────────────────────────
 export default function SeedCraftsmen() {
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">(
     "idle",

@@ -195,7 +195,6 @@
   .bg-cream-texture {
   background-image: url('/cream.jpg');
   background-size: cover;
-  background-attachment: fixed;
   background-position: center;
 }
 }
