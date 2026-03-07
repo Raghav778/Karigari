@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Craftsman } from "@/data/craftsmen";
-import { getCraftImage } from "@/lib/craftImages";
 import { useLanguage } from "@/contexts/languageContext";
+import { getCraftImage, optimizeCloudinaryUrl } from "@/lib/craftImages";
 
 interface CraftsmanCardProps {
   craftsman: Craftsman;
@@ -15,7 +15,7 @@ const WhatsAppIcon = () => (
 
 const CraftsmanCard: React.FC<CraftsmanCardProps> = ({ craftsman }) => {
   const { t } = useLanguage();
-  const img = getCraftImage(craftsman.image);
+  const img = optimizeCloudinaryUrl(getCraftImage(craftsman.image), 600, 460);
 
   return (
     <Link to={`/craftsman/${craftsman.id}`} className="group block">
@@ -38,6 +38,7 @@ const CraftsmanCard: React.FC<CraftsmanCardProps> = ({ craftsman }) => {
           <img
             src={img}
             alt={craftsman.craft}
+            loading="lazy"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
 
@@ -163,12 +164,26 @@ const CraftsmanCard: React.FC<CraftsmanCardProps> = ({ craftsman }) => {
             <div className="flex items-center justify-between mt-3">
               {/* Star rating */}
               <div className="flex items-center gap-1">
-                {[1,2,3,4,5].map((s) => (
-                  <svg key={s} viewBox="0 0 24 24" className="w-3 h-3" fill={s <= Math.round(craftsman.rating) ? "hsl(38 90% 52%)" : "none"} stroke="hsl(38 90% 52%)" strokeWidth="2">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <svg
+                    key={s}
+                    viewBox="0 0 24 24"
+                    className="w-3 h-3"
+                    fill={
+                      s <= Math.round(craftsman.rating)
+                        ? "hsl(38 90% 52%)"
+                        : "none"
+                    }
+                    stroke="hsl(38 90% 52%)"
+                    strokeWidth="2"
+                  >
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                   </svg>
                 ))}
-                <span className="font-body text-[11px] ml-1" style={{ color: "hsl(28 20% 52%)" }}>
+                <span
+                  className="font-body text-[11px] ml-1"
+                  style={{ color: "hsl(28 20% 52%)" }}
+                >
                   {craftsman.rating.toFixed(1)}
                 </span>
               </div>

@@ -49,6 +49,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { optimizeCloudinaryUrl } from "@/lib/craftImages";
 
 const tabs = ["About", "Portfolio", "Booking"] as const;
 
@@ -556,30 +557,31 @@ const CraftsmanProfile = () => {
               />
             ) : (
               <img
-                src={galleryImages[0]}
+                src={optimizeCloudinaryUrl(galleryImages[0], 1200)}
+                loading="eager"
                 alt={craftsman.craft}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
               />
             )}
           </div>
           <img
-            src={galleryImages[1] || img}
+            src={optimizeCloudinaryUrl(galleryImages[1] || img, 800)}
             alt={craftsman.craft}
             className="w-full h-full object-cover"
           />
           <img
-            src={galleryImages[2] || img}
+            src={optimizeCloudinaryUrl(galleryImages[2] || img, 800)}
             alt={craftsman.craft}
             className="w-full h-full object-cover"
           />
           <img
-            src={galleryImages[3] || img}
+            src={optimizeCloudinaryUrl(galleryImages[3] || img, 800)}
             alt={craftsman.craft}
             className="w-full h-full object-cover"
           />
           <div className="relative overflow-hidden">
             <img
-              src={galleryImages[4] || img}
+              src={optimizeCloudinaryUrl(galleryImages[4] || img, 800)}
               alt={craftsman.craft}
               className="w-full h-full object-cover"
             />
@@ -716,13 +718,13 @@ const CraftsmanProfile = () => {
                       <div className="space-y-3 mb-8">
                         {displayedReviews.map((r, i) => (
                           <ReviewCard
-                            key = {"id" in r ? r.id : i}
+                            key={"id" in r ? r.id : i}
                             name={r.name}
                             rating={r.rating}
                             comment={r.comment}
                             date={r.date}
                           />
-                        ))} 
+                        ))}
                       </div>
                     )}
 
