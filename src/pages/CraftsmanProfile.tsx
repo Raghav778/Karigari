@@ -715,12 +715,6 @@ const CraftsmanProfile = () => {
                     ) : (
                       <div className="space-y-3 mb-8">
                         {displayedReviews.map((r, i) => (
-
-
-
-
-
-                          
                           <ReviewCard
                             key = {"id" in r ? r.id : i}
                             name={r.name}
