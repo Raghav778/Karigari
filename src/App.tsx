@@ -23,6 +23,8 @@ import KarigarProfile from "@/pages/KarigarProfile";
 import KarigarDashboard from "@/pages/KarigarDashboard";
 import AdminKarigarRequests from "@/pages/AdminKarigarRequests";
 import MyBookings from "@/pages/MyBookings";
+import SeedCraftsmen from "./pages/SeedCraftsmen";
+import AdminImageUploader from "./pages/AdminImageUploader";
 
 const queryClient = new QueryClient();
 
@@ -52,14 +54,25 @@ const App = () => {
                   <Route path="/signup" element={<SignUp />} />
                   <Route path="/join" element={<Join />} />
                   <Route path="/karigar-profile" element={<KarigarProfile />} />
-                  <Route path="/karigar-dashboard" element={<KarigarDashboard />} />
-                  <Route path="/admin/karigar-requests" element={<AdminKarigarRequests />} />
+                  <Route
+                    path="/karigar-dashboard"
+                    element={<KarigarDashboard />}
+                  />
+                  <Route
+                    path="/admin/karigar-requests"
+                    element={<AdminKarigarRequests />}
+                  />
                   <Route path="*" element={<NotFound />} />
                   <Route
                     path="/karigar-dashboard"
                     element={<KarigarDashboard />}
                   />
                   <Route path="/my-bookings" element={<MyBookings />} />
+                  <Route path="/admin-seed" element={<SeedCraftsmen />} />
+                  <Route
+                    path="/admin-images"
+                    element={<AdminImageUploader />}
+                  />
                 </Routes>
                 <Footer />
               </BrowserRouter>
