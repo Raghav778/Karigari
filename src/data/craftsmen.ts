@@ -96,7 +96,7 @@ export function mapFirestoreKarigarToCraftsman(id: string, data: any): Craftsman
     region:      craft.region || "Rajasthan",
     location:    personal.city || personal.village || "",
     experience:  craft.experience || "",
-    image:       data.portfolio?.[0] || "",   // first portfolio photo as card image
+    image:       data.image || data.portfolio?.[0] || "",   // first portfolio photo as card image
     story:       data.description || "",
     materials:   data.materials || [],
     endangered:  data.agreements?.agreeGI ?? false,
