@@ -1,24 +1,3 @@
-/**
- * SeedCraftsmen.tsx
- * ─────────────────────────────────────────────────────────────────
- * TEMPORARY PAGE — Add to routes, visit once to seed, then remove.
- *
- * STEP 1: Add to src/App.tsx (or wherever your routes live):
- *   import SeedCraftsmen from "./pages/SeedCraftsmen";
- *   <Route path="/admin-seed" element={<SeedCraftsmen />} />
- *
- * STEP 2: Visit http://localhost:5173/admin-seed
- *
- * STEP 3: Click "Seed All Craftsmen" — 31 profiles are inserted
- *         into Firestore with status: "approved".
- *
- * STEP 4: portfolio arrays are EMPTY — add images via the
- *         /admin-images page (see AdminImageUploader.tsx).
- *
- * STEP 5: Remove this route and file when done.
- * ─────────────────────────────────────────────────────────────────
- */
-
 import { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";

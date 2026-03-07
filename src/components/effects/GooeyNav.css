@@ -204,3 +204,16 @@
     opacity: 0;
   }
 }
+
+/* ── Dark mode overrides ── */
+.dark .gooey-nav-container nav ul {
+  color: white;
+}
+
+.dark .gooey-nav-container nav ul li {
+  color: white;
+}
+
+.dark .gooey-nav-container .effect.text {
+  color: white;
+}
