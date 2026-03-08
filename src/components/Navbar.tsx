@@ -273,6 +273,9 @@ useEffect(() => {
     setShowSuggestions(false);
   };
 
+  // Returns only the first word of a full name
+  const firstName = (name: string) => name.trim().split(/\s+/)[0];
+
   const regionGroups = [{ label: "Rajasthan" }, { label: "Madhya Pradesh" }];
   const navGroups = [
     {
@@ -621,7 +624,7 @@ useEffect(() => {
                         className={`text-sm font-display uppercase tracking-[1px] hover:text-gold transition-colors underline-offset-2 hover:underline ${isDark ? "text-white" : "text-heritage-heading"}`}
                         title="View your karigar profile"
                       >
-                        {userName || user.displayName || "User"}
+                        {firstName(userName || user.displayName || "User")}
                       </Link>
                     ) : (
                       <span
@@ -796,7 +799,7 @@ useEffect(() => {
                         onClick={() => setOpen(false)}
                         title="View your karigar profile"
                       >
-                        {userName || user.displayName || "User"}
+                        {firstName(userName || user.displayName || "User")}
                       </Link>
                     ) : (
                       <span className="font-semibold">
