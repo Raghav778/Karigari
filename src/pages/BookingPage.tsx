@@ -126,53 +126,38 @@ const BookingPage = () => {
       return;
     }
 
+    console.log("🔥 handleConfirm fired");
+    console.log("user.uid:", user.uid);
+    console.log("craftsman:", craftsman);
+
     try {
-      // Look up karigar's Firebase UID by matching craftsman name in Firestore
       const karigarDocSnap = craftsman?.id
         ? await getDoc(doc(db, "craftsmen", craftsman.id))
         : null;
 
       const karigarUid = karigarDocSnap?.data()?.userId ?? "";
-      const karigarName =
-        karigarDocSnap?.data()?.personal?.profileName ||
-        karigarDocSnap?.data()?.personal?.name ||
-        craftsman?.name ||
-        "";
+      console.log("karigarUid:", karigarUid);
+      console.log("karigarDoc exists:", karigarDocSnap?.exists());
 
-      // Save booking document
       const bookingRef = await addDoc(collection(db, "bookings"), {
         craftsmanId: craftsman?.id ?? "",
         craftsmanName: craftsman?.name ?? "",
-        karigarUid: karigarUid ?? "",
-        karigarName,
+        karigarUid,
         customerUid: user.uid,
         customerName: user.displayName || "Guest",
         customerEmail: user.email || "",
         date: confirmedDate,
         slot: selectedSlot,
-        status: "pending", // karigar must confirm
-        seenByKarigar: false, // triggers "New" badge in dashboard
+        status: "pending",
+        seenByKarigar: false,
         createdAt: serverTimestamp(),
       });
 
-      // Write notification for karigar so their bell lights up
-      if (karigarUid) {
-        await addDoc(collection(db, "notifications"), {
-          karigarUid,
-          bookingId: bookingRef.id,
-          customerName: user.displayName || "Guest",
-          date: confirmedDate,
-          slot: selectedSlot,
-          read: false,
-          createdAt: serverTimestamp(),
-        });
-      }
-
+      console.log("✅ Booking saved! ID:", bookingRef.id);
       setBooked(true);
     } catch (err) {
-      console.error("Booking save failed:", err);
-      alert("Booking failed. Please try again.");
-      return;
+      console.error("❌ Booking failed:", err);
+      alert("Booking failed: " + (err as any).message);
     }
   };
 
