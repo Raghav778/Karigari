@@ -113,25 +113,27 @@ const Navbar = () => {
   const [loginOpen, setLoginOpen] = useState(false);
   const [firestoreArtisans, setFirestoreArtisans] = useState<Suggestion[]>([]);
 
-useEffect(() => {
-  getDocs(
-    query(collection(db, "craftsmen"), where("status", "==", "approved"))
-  ).then((snap) => {
-    const results: Suggestion[] = snap.docs.map((d) => {
-      const data = d.data();
-      const name = data.personal?.profileName || data.personal?.name || "";
-      const craft = data.craft?.craftForm || data.craft?.craftCustom || "";
-      const location = data.personal?.city || data.personal?.village || "";
-      return {
-        kind: "artisan" as SuggestionKind,
-        label: name,
-        sublabel: `${craft} · ${location}`,
-        path: `/craftsman/${d.id}`,
-      };
-    }).filter((s) => s.label); // skip entries with no name
-    setFirestoreArtisans(results);
-  });
-}, []);
+  useEffect(() => {
+    getDocs(
+      query(collection(db, "craftsmen"), where("status", "==", "approved")),
+    ).then((snap) => {
+      const results: Suggestion[] = snap.docs
+        .map((d) => {
+          const data = d.data();
+          const name = data.personal?.profileName || data.personal?.name || "";
+          const craft = data.craft?.craftForm || data.craft?.craftCustom || "";
+          const location = data.personal?.city || data.personal?.village || "";
+          return {
+            kind: "artisan" as SuggestionKind,
+            label: name,
+            sublabel: `${craft} · ${location}`,
+            path: `/craftsman/${d.id}`,
+          };
+        })
+        .filter((s) => s.label); // skip entries with no name
+      setFirestoreArtisans(results);
+    });
+  }, []);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -226,13 +228,13 @@ useEffect(() => {
           path: `/craftsman/${c.id}`,
         });
     });
-      firestoreArtisans.forEach((s) => {
-    if (
-      s.label.toLowerCase().includes(q) ||
-      (s.sublabel || "").toLowerCase().includes(q)
-    )
-      results.push(s);
-  });
+    firestoreArtisans.forEach((s) => {
+      if (
+        s.label.toLowerCase().includes(q) ||
+        (s.sublabel || "").toLowerCase().includes(q)
+      )
+        results.push(s);
+    });
     crafts.forEach((c) => {
       if (
         c.name.toLowerCase().includes(q) ||
@@ -273,9 +275,6 @@ useEffect(() => {
     setSearchQuery("");
     setShowSuggestions(false);
   };
-
-  // Returns only the first word of a full name
-  const firstName = (name: string) => name.trim().split(/\s+/)[0];
 
   const regionGroups = [{ label: "Rajasthan" }, { label: "Madhya Pradesh" }];
   const navGroups = [
@@ -618,18 +617,14 @@ useEffect(() => {
                         My Bookings
                       </Link>
                     )}
-                    
+
                     {isKarigar ? (
                       <Link
                         to="/karigar-profile"
                         className={`text-sm font-display uppercase tracking-[1px] hover:text-gold transition-colors underline-offset-2 hover:underline ${isDark ? "text-white" : "text-heritage-heading"}`}
                         title="View your karigar profile"
                       >
-<<<<<<< HEAD
-                        {firstName(userName || user.displayName || "User")}
-=======
                         {firstName}
->>>>>>> 4d4dd33c0a1a934b87e5f90d783e322ccbaf9a67
                       </Link>
                     ) : (
                       <span
@@ -804,16 +799,10 @@ useEffect(() => {
                         onClick={() => setOpen(false)}
                         title="View your karigar profile"
                       >
-<<<<<<< HEAD
-                        {firstName(userName || user.displayName || "User")}
-=======
                         {firstName}
->>>>>>> 4d4dd33c0a1a934b87e5f90d783e322ccbaf9a67
                       </Link>
                     ) : (
-                      <span className="font-semibold">
-                        {firstName}
-                      </span>
+                      <span className="font-semibold">{firstName}</span>
                     )}
                   </p>
                   <button
