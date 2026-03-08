@@ -4,6 +4,7 @@ import { Search, AlertTriangle, ArrowRight, Clock, ArrowLeft } from "lucide-reac
 import { crafts } from "@/data/crafts";
 import { getCraftImage } from "@/lib/craftImages";
 import { useBackground } from "@/hooks/useBackground";
+import ContributeModal from "@/components/ContributeModal";
 
 const fullArticles = [
   {
@@ -210,6 +211,7 @@ const ArticleView = ({ article, onClose }: { article: Article; onClose: () => vo
 const Archive = () => {
   const [search, setSearch] = useState("");
   const [openArticle, setOpenArticle] = useState<Article | null>(null);
+  const [contributeOpen, setContributeOpen] = useState(false);
 
   const filtered = fullArticles.filter(
     (a) =>
@@ -230,9 +232,9 @@ const Archive = () => {
         )}
       </AnimatePresence>
 
-      <div
-        style={creamBg}
-      >
+      <ContributeModal open={contributeOpen} onClose={() => setContributeOpen(false)} />
+
+      <div style={creamBg}>
         <div className="section-spacing">
           <div className="container-heritage">
             <motion.div
@@ -282,21 +284,16 @@ const Archive = () => {
                     >
                       <div
                         className="relative overflow-hidden"
-                        style={{
-                          borderRadius: "20px 20px 0 0",
-                          height: "190px",
-                        }}
+                        style={{ borderRadius: "20px 20px 0 0", height: "190px" }}
                       >
                         <img
                           src={img}
                           alt={article.title}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           style={{
-                            filter:
-                              "sepia(20%) saturate(115%) brightness(0.9) contrast(1.05)",
+                            filter: "sepia(20%) saturate(115%) brightness(0.9) contrast(1.05)",
                           }}
                         />
-                        {/* Warm vignette + bottom fade */}
                         <div
                           className="absolute inset-0 pointer-events-none"
                           style={{
@@ -304,7 +301,6 @@ const Archive = () => {
                               "linear-gradient(to bottom, hsl(33 70% 45% / 0.07) 0%, transparent 30%, hsl(20 40% 8% / 0.42) 100%)",
                           }}
                         />
-                        {/* Decorative inset gold frame */}
                         <div
                           className="absolute pointer-events-none"
                           style={{
@@ -314,7 +310,6 @@ const Archive = () => {
                             boxShadow: "inset 0 0 0 1px hsl(20 40% 8% / 0.1)",
                           }}
                         />
-                        {/* Category badge over image */}
                         <div className="absolute bottom-3 left-4">
                           <span className="seal-badge text-[9px]">
                             {article.category}
@@ -357,28 +352,25 @@ const Archive = () => {
               </div>
 
               <aside className="space-y-6">
+                {/* Most Endangered */}
                 <div
                   style={{
                     borderRadius: "18px",
-                    background:
-                      "linear-gradient(150deg, hsl(40 55% 93%) 0%, hsl(35 38% 87%) 100%)",
+                    background: "linear-gradient(150deg, hsl(40 55% 93%) 0%, hsl(35 38% 87%) 100%)",
                     border: "1px solid hsl(46 55% 70% / 0.65)",
-                    boxShadow:
-                      "0 6px 24px hsl(20 40% 18% / 0.12), inset 0 1px 0 hsl(46 100% 72% / 0.4)",
+                    boxShadow: "0 6px 24px hsl(20 40% 18% / 0.12), inset 0 1px 0 hsl(46 100% 72% / 0.4)",
                     overflow: "hidden",
                   }}
                 >
                   <div
                     style={{
                       height: "3px",
-                      background:
-                        "linear-gradient(to right, hsl(15 50% 22%), hsl(46 100% 50%), hsl(15 50% 22%))",
+                      background: "linear-gradient(to right, hsl(15 50% 22%), hsl(46 100% 50%), hsl(15 50% 22%))",
                     }}
                   />
                   <div className="p-5">
                     <h3 className="font-display text-sm uppercase tracking-[2px] mb-4 flex items-center gap-2" style={{ color: "hsl(20 40% 18%)" }}>
-                      <AlertTriangle size={14} className="text-deep-maroon" />{" "}
-                      Most Endangered
+                      <AlertTriangle size={14} className="text-deep-maroon" /> Most Endangered
                     </h3>
                     <ul className="space-y-3">
                       {endangered.map((c, i) => (
@@ -386,12 +378,8 @@ const Archive = () => {
                           key={c.id}
                           className="flex items-center justify-between font-body text-sm"
                           style={{
-                            paddingBottom:
-                              i < endangered.length - 1 ? "10px" : 0,
-                            borderBottom:
-                              i < endangered.length - 1
-                                ? "1px solid hsl(46 100% 50% / 0.18)"
-                                : "none",
+                            paddingBottom: i < endangered.length - 1 ? "10px" : 0,
+                            borderBottom: i < endangered.length - 1 ? "1px solid hsl(46 100% 50% / 0.18)" : "none",
                           }}
                         >
                           <span style={{ color: "hsl(20 40% 18%)" }}>{c.name}</span>
@@ -413,6 +401,7 @@ const Archive = () => {
                   </div>
                 </div>
 
+                {/* Contribute box */}
                 <div className="bg-primary p-6 text-center">
                   <h3 className="font-display text-lg text-gold mb-2">
                     Contribute to the Legacy
@@ -420,20 +409,22 @@ const Archive = () => {
                   <p className="font-body text-sm text-primary-foreground opacity-80 mb-4">
                     Help document and preserve disappearing craft traditions.
                   </p>
-                  <button className="btn-secondary border-gold text-gold text-xs">
+                  <button
+                    className="btn-secondary border-gold text-gold text-xs"
+                    onClick={() => setContributeOpen(true)}
+                  >
                     Get Involved
                   </button>
                 </div>
 
+                {/* Editor's Pick */}
                 <div
                   className="overflow-hidden group cursor-pointer"
                   style={{
                     borderRadius: "18px",
-                    background:
-                      "linear-gradient(160deg, hsl(40 55% 93%) 0%, hsl(35 38% 87%) 100%)",
+                    background: "linear-gradient(160deg, hsl(40 55% 93%) 0%, hsl(35 38% 87%) 100%)",
                     border: "1px solid hsl(46 55% 70% / 0.65)",
-                    boxShadow:
-                      "0 6px 24px hsl(20 40% 18% / 0.12), inset 0 1px 0 hsl(46 100% 72% / 0.4)",
+                    boxShadow: "0 6px 24px hsl(20 40% 18% / 0.12), inset 0 1px 0 hsl(46 100% 72% / 0.4)",
                   }}
                   onClick={() => setOpenArticle(fullArticles[3])}
                 >
@@ -445,17 +436,11 @@ const Archive = () => {
                       src={getCraftImage("chanderi")}
                       alt="Featured"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      style={{
-                        filter:
-                          "sepia(20%) saturate(115%) brightness(0.9) contrast(1.05)",
-                      }}
+                      style={{ filter: "sepia(20%) saturate(115%) brightness(0.9) contrast(1.05)" }}
                     />
                     <div
                       className="absolute inset-0 pointer-events-none"
-                      style={{
-                        background:
-                          "linear-gradient(to bottom, transparent 30%, hsl(20 40% 8% / 0.45) 100%)",
-                      }}
+                      style={{ background: "linear-gradient(to bottom, transparent 30%, hsl(20 40% 8% / 0.45) 100%)" }}
                     />
                     <div
                       className="absolute pointer-events-none"
@@ -471,8 +456,7 @@ const Archive = () => {
                       className="mb-3"
                       style={{
                         height: "1px",
-                        background:
-                          "linear-gradient(to right, transparent, hsl(46 100% 50% / 0.65) 40%, hsl(46 100% 50% / 0.65) 60%, transparent)",
+                        background: "linear-gradient(to right, transparent, hsl(46 100% 50% / 0.65) 40%, hsl(46 100% 50% / 0.65) 60%, transparent)",
                       }}
                     />
                     <p className="font-display text-xs uppercase tracking-[2px] text-gold mb-1">
