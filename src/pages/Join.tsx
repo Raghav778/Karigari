@@ -152,20 +152,18 @@ const TagPill = ({ label, onRemove }:{ label:string; onRemove:()=>void }) => (
 export default function Join() {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
 
-  useEffect(() => {
+useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, (user) => {
     if (!user) {
       navigate("/", {
-        state: {
-          openLogin: true,
-          message: "Sign in to begin your artisan registration journey.",
-          redirectTo: "/join"
-        }
+        state: { openLogin: true, redirectTo: "/join" },
       });
+    } else {
+      setCurrentUser(user); // ← store the user
     }
   });
-
   return () => unsubscribe();
 }, [navigate]);
 
@@ -207,6 +205,7 @@ export default function Join() {
   const [errors,            setErrors]            = useState<Record<string,string>>({});
   const [submitted,         setSubmitted]         = useState(false);
   const [isSubmitting,      setIsSubmitting]      = useState(false); 
+  
 
   const mediaRef = useRef<HTMLInputElement>(null);
   const certRef  = useRef<HTMLInputElement>(null);
@@ -358,7 +357,7 @@ export default function Join() {
 
     // 🔥 Create Data Object
     const fullData = {
-      userId: auth.currentUser?.uid,
+      userId: currentUser?.uid ?? auth.currentUser?.uid,
       personal,
       craft,
       specialties: selectedSpecialties,
