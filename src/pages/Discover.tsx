@@ -21,18 +21,15 @@ const regions = ["All", "Rajasthan", "Madhya Pradesh"] as const;
 
 const Discover = () => {
   const [regionFilter, setRegionFilter] = useState<string>("All");
-  // craftFilter stores the craft NAME string (e.g. "Blue Pottery"), not an ID
   const [craftFilter, setCraftFilter] = useState<string>("All");
-
   const [filterOpen, setFilterOpen] = useState(false);
 
   const { creamBg } = useBackground();
 
   // ── Firestore approved karigar ──────────────────────────────────────────
-  const [firestoreArtisans, setFirestoreArtisans] = useState<typeof craftsmen>(
-    [],
-  );
+  const [firestoreArtisans, setFirestoreArtisans] = useState<typeof craftsmen>([]);
   const [firestoreCraftsmen, setFirestoreCraftsmen] = useState<Craftsman[]>([]);
+  const [seededStaticIds, setSeededStaticIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchApproved = async () => {
@@ -40,6 +37,14 @@ const Discover = () => {
         const snap = await getDocs(
           query(collection(db, "craftsmen"), where("status", "==", "approved")),
         );
+
+        // Collect all staticIds that have been seeded to Firestore
+        const staticIds = new Set<string>();
+        snap.docs.forEach((d) => {
+          const sid = d.data().staticId;
+          if (sid) staticIds.add(String(sid));
+        });
+        setSeededStaticIds(staticIds);
 
         // Map to lightweight artisan objects
         const artisans = snap.docs
@@ -81,28 +86,24 @@ const Discover = () => {
   }, []);
 
   // ── Merge static + Firestore, no duplicates ─────────────────────────────
-  const allCraftsmen: Craftsman[] = [
-    ...craftsmen,
-    ...firestoreCraftsmen.filter(
-      (fc) => !craftsmen.some((sc) => sc.id === fc.id),
-    ),
+  // Static entries whose staticId exists in Firestore are suppressed — served from Firestore instead
+  const allArtisans: Craftsman[] = [
+    ...craftsmen.filter((sc) => !seededStaticIds.has(sc.id)),
+    ...firestoreCraftsmen,
   ];
 
   // ── Build dynamic craft list ─────────────────────────────────────────────
-  // Static craft entries (name + region for region-based narrowing)
   const staticCraftEntries = useMemo(
     () => crafts.map((c) => ({ name: c.name, region: c.region })),
     [],
   );
 
-  // All craft names coming from approved Firestore karigar
   const firestoreCraftNames = useMemo(
     () =>
       firestoreArtisans.map((a) => (a as any).craft as string).filter(Boolean),
     [firestoreArtisans],
   );
 
-  // Unified deduplicated list: static first, then any NEW names from Firestore
   const allCraftEntries = useMemo(() => {
     const seen = new Set(staticCraftEntries.map((e) => e.name.toLowerCase()));
     const extra: { name: string; region: string }[] = [];
@@ -129,7 +130,6 @@ const Discover = () => {
 
     const craftParam = params.get("craft");
     if (craftParam) {
-      // Support legacy ID-based params and new name-based params
       const byId = crafts.find((c) => c.id === craftParam);
       const byName = allCraftEntries.find(
         (c) => c.name.toLowerCase() === craftParam.toLowerCase(),
@@ -155,7 +155,6 @@ const Discover = () => {
     }
   };
 
-  // Crafts visible for the current region (show all if no region or region matches)
   const visibleCraftEntries = useMemo(() => {
     if (regionFilter === "All") return allCraftEntries;
     return allCraftEntries.filter(
@@ -166,13 +165,6 @@ const Discover = () => {
   const activeCraftName = craftFilter !== "All" ? craftFilter : null;
 
   // ── Artisan filtering ────────────────────────────────────────────────────
-  const allArtisans = [
-  ...craftsmen,
-  ...firestoreCraftsmen.filter(
-    (fc) => !craftsmen.some((sc) => sc.id === fc.id)
-  ),
-];
-
   const filtered = allArtisans.filter((c) => {
     if (regionFilter !== "All" && c.region !== regionFilter) return false;
     if (craftFilter !== "All" && c.craft !== craftFilter) return false;
