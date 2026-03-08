@@ -78,6 +78,14 @@ const Footer = () => {
                   Archive
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/kalakendra"
+                  className="hover:text-heritage-gold transition-colors"
+                >
+                  Kalakendra
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
