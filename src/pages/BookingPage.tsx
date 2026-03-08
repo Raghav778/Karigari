@@ -32,10 +32,7 @@ const BookingPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const selectedCraftsman = craftsmen.find((c) => c.id === id);
-  const [chosenId, setChosenId] = useState<string | null>(
-    selectedCraftsman?.id ?? null,
-  );
+  const [chosenId, setChosenId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
@@ -56,12 +53,14 @@ const BookingPage = () => {
     });
   }, []);
 
-  const allCraftsmen = [
-    ...craftsmen,
-    ...firestoreArtisans.filter(
-      (fc) => !craftsmen.some((sc) => sc.id === fc.id),
-    ),
-  ];
+  useEffect(() => {
+    if (id && firestoreArtisans.length > 0) {
+      const found = firestoreArtisans.find((c) => c.id === id);
+      if (found) setChosenId(found.id);
+    }
+  }, [id, firestoreArtisans]);
+
+  const allCraftsmen = firestoreArtisans;
 
   const craftsman = allCraftsmen.find((c) => c.id === chosenId);
 
