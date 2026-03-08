@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Star,
   LogIn,
+  Clock,
 } from "lucide-react";
 import { craftsmen } from "@/data/craftsmen";
 import { getCraftImage } from "@/lib/craftImages";
@@ -21,6 +22,8 @@ import {
   query,
   where,
   serverTimestamp,
+  getDoc,
+  doc,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -106,18 +109,14 @@ const BookingPage = () => {
 
     try {
       // Look up karigar's Firebase UID by matching craftsman name in Firestore
-      const karigarSnap = await getDocs(
-        query(
-          collection(db, "craftsmen"),
-          where("personal.name", "==", craftsman?.name ?? ""),
-        ),
-      );
+      const karigarDocSnap = craftsman?.id
+        ? await getDoc(doc(db, "craftsmen", craftsman.id))
+        : null;
 
-      const karigarDoc = karigarSnap.empty ? null : karigarSnap.docs[0];
-      const karigarUid = karigarDoc?.data().userId ?? null;
+      const karigarUid = karigarDocSnap?.data()?.userId ?? null;
       const karigarName =
-        karigarDoc?.data().personal?.profileName ||
-        karigarDoc?.data().personal?.name ||
+        karigarDocSnap?.data()?.personal?.profileName ||
+        karigarDocSnap?.data()?.personal?.name ||
         craftsman?.name ||
         "";
 
@@ -158,9 +157,7 @@ const BookingPage = () => {
   };
 
   return (
-    <div
-      style={creamBg}
-    >
+    <div style={creamBg}>
       <div className="container-heritage px-4 py-10">
         <Link
           to="/discover"
@@ -369,11 +366,11 @@ const BookingPage = () => {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                     >
-                      <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center border-2 border-gold rounded-full">
-                        <Check size={28} className="text-gold" />
+                      <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center border-2 border-amber-400 rounded-full">
+                        <Clock size={28} className="text-amber-500" />
                       </div>
-                      <h3 className="font-display text-xl text-gold mb-2">
-                        Confirmed!
+                      <h3 className="font-display text-xl text-amber-600 mb-2">
+                        Request Sent!
                       </h3>
                       <p className="font-body text-sm text-muted-foreground mb-1">
                         {craftsman.name}
@@ -385,9 +382,13 @@ const BookingPage = () => {
                         {selectedSlot}
                       </p>
                       <div className="gold-divider mb-4" />
+                      <p className="font-body text-sm text-amber-700 font-medium mb-2">
+                        ⏳ Awaiting artisan approval
+                      </p>
                       <p className="font-body text-xs text-muted-foreground mb-6">
-                        Payment to be made directly to the artisan at the time
-                        of visit.
+                        The artisan will review your request and confirm within
+                        2–3 days. Payment to be made directly at the time of
+                        visit.
                       </p>
                       <button
                         onClick={() => {

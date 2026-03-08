@@ -149,80 +149,127 @@ const BookingCard = ({ booking, onAction, onView, updating }: {
   const Icon = cfg.icon;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
       className="bg-white border transition-all hover:shadow-md group"
-      style={{ borderColor: `${ORG}20` }}>
+      style={{ borderColor: `${ORG}20` }}
+    >
       {/* Top bar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: `${ORG}15`, backgroundImage: BLOCKPRINT_BG, backgroundColor: "hsl(var(--sandstone)/0.5)" }}>
+      <div
+        className="flex items-center justify-between px-5 py-3 border-b"
+        style={{
+          borderColor: `${ORG}15`,
+          backgroundImage: BLOCKPRINT_BG,
+          backgroundColor: "hsl(var(--sandstone)/0.5)",
+        }}
+      >
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
-          <span className={`font-body text-[10px] uppercase tracking-[1.5px] ${cfg.color}`}>{cfg.label}</span>
+          <span
+            className={`font-body text-[10px] uppercase tracking-[1.5px] ${cfg.color}`}
+          >
+            {cfg.label}
+          </span>
         </div>
-        <span className="font-body text-[10px] text-muted-foreground/60">{formatDate(booking.createdAt)}</span>
+        <span className="font-body text-[10px] text-muted-foreground/60">
+          {formatDate(booking.createdAt)}
+        </span>
       </div>
 
       <div className="p-5">
         <div className="flex items-start justify-between gap-4">
           {/* Customer info */}
           <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center border font-display text-base"
-              style={{ borderColor: `${ORG}40`, background: `${ORG}10`, color: ORG }}>
+            <div
+              className="w-10 h-10 flex-shrink-0 flex items-center justify-center border font-display text-base"
+              style={{
+                borderColor: `${ORG}40`,
+                background: `${ORG}10`,
+                color: ORG,
+              }}
+            >
               {booking.customerName?.charAt(0)?.toUpperCase() || "?"}
             </div>
             <div className="min-w-0">
-              <p className="font-display text-sm text-heritage-heading truncate">{booking.customerName}</p>
-              <p className="font-body text-xs text-muted-foreground truncate">{booking.customerEmail}</p>
+              <p className="font-display text-sm text-heritage-heading truncate">
+                {booking.customerName}
+              </p>
+              <p className="font-body text-xs text-muted-foreground truncate">
+                {booking.customerEmail}
+              </p>
               {booking.customerPhone && (
-                <p className="font-body text-xs text-muted-foreground">{booking.customerPhone}</p>
+                <p className="font-body text-xs text-muted-foreground">
+                  {booking.customerPhone}
+                </p>
               )}
             </div>
           </div>
 
           {/* View button */}
-          <button onClick={() => onView(booking)}
+          <button
+            onClick={() => onView(booking)}
             className="flex-shrink-0 flex items-center gap-1.5 font-body text-[10px] uppercase tracking-[1px] px-3 py-1.5 border transition-all hover:bg-sandstone"
-            style={{ borderColor: `${ORG}40`, color: ORG }}>
+            style={{ borderColor: `${ORG}40`, color: ORG }}
+          >
             <Eye size={11} /> Details
           </button>
         </div>
 
         {/* Date & slot */}
-        <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t" style={{ borderColor: `${ORG}15` }}>
+        <div
+          className="flex flex-wrap gap-4 mt-4 pt-4 border-t"
+          style={{ borderColor: `${ORG}15` }}
+        >
           <div className="flex items-center gap-1.5">
             <Calendar size={12} style={{ color: ORG }} />
-            <span className="font-body text-xs text-foreground">{booking.date}</span>
+            <span className="font-body text-xs text-foreground">
+              {booking.date}
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <Clock size={12} style={{ color: ORG }} />
-            <span className="font-body text-xs text-foreground">{booking.slot}</span>
+            <span className="font-body text-xs text-foreground">
+              {booking.slot}
+            </span>
           </div>
           {booking.amount && (
             <div className="flex items-center gap-1.5">
               <IndianRupee size={12} style={{ color: ORG }} />
-              <span className="font-body text-xs text-foreground">{booking.amount}</span>
+              <span className="font-body text-xs text-foreground">
+                {booking.amount}
+              </span>
             </div>
           )}
         </div>
 
         {/* Actions */}
-        {(cfg.actionNext || booking.status === "pending" || booking.status === "confirmed" || booking.status === "active") && (
+        {(cfg.actionNext ||
+          booking.status === "pending" ||
+          booking.status === "confirmed" ||
+          booking.status === "active") && (
           <div className="flex items-center gap-2 mt-4">
             {cfg.actionNext && cfg.actionLabel && (
               <button
                 disabled={updating === booking.id}
                 onClick={() => onAction(booking.id, cfg.actionNext!)}
                 className="flex items-center gap-1.5 px-4 py-2 font-body text-xs uppercase tracking-[1px] text-white transition-all disabled:opacity-50"
-                style={{ background: ORG }}>
+                style={{
+                  background: booking.status === "pending" ? "#16a34a" : ORG,
+                }}
+              >
                 {updating === booking.id ? <Spin /> : <Check size={11} />}
                 {cfg.actionLabel}
               </button>
             )}
             {/* Cancel option for pending & confirmed */}
-            {(booking.status === "pending" || booking.status === "confirmed") && (
+            {(booking.status === "pending" ||
+              booking.status === "confirmed") && (
               <button
                 disabled={updating === booking.id}
                 onClick={() => onAction(booking.id, "cancelled")}
-                className="flex items-center gap-1.5 px-4 py-2 font-body text-xs uppercase tracking-[1px] border border-red-300 text-red-500 hover:bg-red-50 transition-all disabled:opacity-50">
+                className="flex items-center gap-1.5 px-4 py-2 font-body text-xs uppercase tracking-[1px] border border-red-300 text-red-500 hover:bg-red-50 transition-all disabled:opacity-50"
+              >
                 <X size={11} /> Reject
               </button>
             )}
@@ -250,73 +297,126 @@ const DetailModal = ({ booking, onClose, onAction, updating }: {
   ];
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       className="fixed inset-0 z-[150] bg-ink/70 flex items-center justify-center p-4 overflow-y-auto"
-      onClick={onClose}>
-      <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         className="relative w-full max-w-md bg-white shadow-2xl my-10"
         style={{ backgroundImage: BLOCKPRINT_BG }}
-        onClick={e => e.stopPropagation()}>
-
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: `${ORG}25` }}>
+        <div
+          className="flex items-center justify-between px-6 py-4 border-b"
+          style={{ borderColor: `${ORG}25` }}
+        >
           <div className="flex items-center gap-3">
             <div className="h-5 w-0.5" style={{ background: ORG }} />
-            <h3 className="font-display text-base uppercase tracking-[2px] text-heritage-heading">Booking Details</h3>
+            <h3 className="font-display text-base uppercase tracking-[2px] text-heritage-heading">
+              Booking Details
+            </h3>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sandstone transition-colors">
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sandstone transition-colors"
+          >
             <X size={16} />
           </button>
         </div>
 
         {/* Status banner */}
-        <div className={`flex items-center gap-3 px-6 py-3 ${cfg.bg} border-b ${cfg.border}`}>
+        <div
+          className={`flex items-center gap-3 px-6 py-3 ${cfg.bg} border-b ${cfg.border}`}
+        >
           <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-          <span className={`font-body text-xs uppercase tracking-[1.5px] ${cfg.color}`}>Status: {cfg.label}</span>
-          <span className="ml-auto font-body text-[10px] text-muted-foreground/60">Booked {formatDate(booking.createdAt)}</span>
+          <span
+            className={`font-body text-xs uppercase tracking-[1.5px] ${cfg.color}`}
+          >
+            Status: {cfg.label}
+          </span>
+          <span className="ml-auto font-body text-[10px] text-muted-foreground/60">
+            Booked {formatDate(booking.createdAt)}
+          </span>
         </div>
 
         {/* Body */}
         <div className="px-6 py-5 space-y-4">
-          {rows.map(({ icon: Icon, label, value }) => value && (
-            <div key={label} className="flex items-start gap-3">
-              <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center border bg-sandstone" style={{ borderColor: `${ORG}35` }}>
-                <Icon size={13} style={{ color: ORG }} />
-              </div>
-              <div>
-                <p className="font-body text-[10px] uppercase tracking-[1.5px] text-muted-foreground/55 mb-0.5">{label}</p>
-                <p className="font-body text-sm text-foreground">{value}</p>
-              </div>
-            </div>
-          ))}
+          {rows.map(
+            ({ icon: Icon, label, value }) =>
+              value && (
+                <div key={label} className="flex items-start gap-3">
+                  <div
+                    className="w-8 h-8 flex-shrink-0 flex items-center justify-center border bg-sandstone"
+                    style={{ borderColor: `${ORG}35` }}
+                  >
+                    <Icon size={13} style={{ color: ORG }} />
+                  </div>
+                  <div>
+                    <p className="font-body text-[10px] uppercase tracking-[1.5px] text-muted-foreground/55 mb-0.5">
+                      {label}
+                    </p>
+                    <p className="font-body text-sm text-foreground">{value}</p>
+                  </div>
+                </div>
+              ),
+          )}
 
           {booking.notes && (
-            <div className="mt-4 p-4 border" style={{ borderColor: `${ORG}25`, background: "hsl(var(--sandstone))" }}>
-              <p className="font-body text-[10px] uppercase tracking-[1.5px] text-muted-foreground/55 mb-1">Notes</p>
-              <p className="font-body text-sm text-muted-foreground leading-relaxed">{booking.notes}</p>
+            <div
+              className="mt-4 p-4 border"
+              style={{
+                borderColor: `${ORG}25`,
+                background: "hsl(var(--sandstone))",
+              }}
+            >
+              <p className="font-body text-[10px] uppercase tracking-[1.5px] text-muted-foreground/55 mb-1">
+                Notes
+              </p>
+              <p className="font-body text-sm text-muted-foreground leading-relaxed">
+                {booking.notes}
+              </p>
             </div>
           )}
         </div>
 
         {/* Actions */}
-        {(cfg.actionNext || booking.status === "pending" || booking.status === "confirmed") && (
+        {(cfg.actionNext ||
+          booking.status === "pending" ||
+          booking.status === "confirmed") && (
           <div className="flex gap-3 px-6 pb-6">
             {cfg.actionNext && cfg.actionLabel && (
               <button
                 disabled={updating === booking.id}
-                onClick={() => { onAction(booking.id, cfg.actionNext!); onClose(); }}
+                onClick={() => {
+                  onAction(booking.id, cfg.actionNext!);
+                  onClose();
+                }}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 font-body text-xs uppercase tracking-[1px] text-white disabled:opacity-50 transition-all"
-                style={{ background: ORG }}>
-                {updating === booking.id ? <Spin /> : <Check size={12} />}
+                style={{
+                  background: booking.status === "pending" ? "#16a34a" : ORG,
+                }}
+              >
+                {updating === booking.id ? <Spin /> : <Check size={11} />}
                 {cfg.actionLabel}
               </button>
             )}
-            {(booking.status === "pending" || booking.status === "confirmed") && (
+            {(booking.status === "pending" ||
+              booking.status === "confirmed") && (
               <button
                 disabled={updating === booking.id}
-                onClick={() => { onAction(booking.id, "cancelled"); onClose(); }}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 font-body text-xs uppercase tracking-[1px] border border-red-300 text-red-500 hover:bg-red-50 disabled:opacity-50 transition-all">
+                onClick={() => {
+                  onAction(booking.id, "cancelled");
+                  onClose();
+                }}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 font-body text-xs uppercase tracking-[1px] border border-red-300 text-red-500 hover:bg-red-50 disabled:opacity-50 transition-all"
+              >
                 <X size={12} /> Reject
               </button>
             )}

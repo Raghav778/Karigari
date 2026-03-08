@@ -1078,11 +1078,11 @@ const CraftsmanProfile = () => {
             >
               {booked ? (
                 <div className="text-center py-10 border border-gold bg-sandstone">
-                  <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center border-2 border-gold rounded-full">
-                    <Check size={26} className="text-gold" />
+                  <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center border-2 border-amber-400 rounded-full">
+                    <Clock size={26} className="text-amber-500" />
                   </div>
-                  <h3 className="font-display text-2xl text-gold mb-3">
-                    Booking Confirmed
+                  <h3 className="font-display text-2xl text-amber-600 mb-3">
+                    Request Sent!
                   </h3>
                   <p className="font-body text-muted-foreground mb-1">
                     {confirmedDate} at {selectedSlot}
@@ -1091,6 +1091,10 @@ const CraftsmanProfile = () => {
                     with {craftsman.name}
                   </p>
                   <div className="gold-divider my-6" />
+                  <p className="font-body text-sm text-amber-700 mb-4">
+                    ⏳ Your booking request is pending. The artisan will approve
+                    or decline within 2–3 days.
+                  </p>
                   <p className="font-body text-sm text-muted-foreground">
                     Payment to be made directly to the artisan at the time of
                     visit.
