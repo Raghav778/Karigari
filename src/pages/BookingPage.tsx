@@ -132,7 +132,7 @@ const BookingPage = () => {
         ? await getDoc(doc(db, "craftsmen", craftsman.id))
         : null;
 
-      const karigarUid = karigarDocSnap?.data()?.userId ?? null;
+      const karigarUid = karigarDocSnap?.data()?.userId ?? "";
       const karigarName =
         karigarDocSnap?.data()?.personal?.profileName ||
         karigarDocSnap?.data()?.personal?.name ||
@@ -143,7 +143,8 @@ const BookingPage = () => {
       const bookingRef = await addDoc(collection(db, "bookings"), {
         craftsmanId: craftsman?.id ?? "",
         craftsmanName: craftsman?.name ?? "",
-        karigarUid,
+        karigarUid: karigarUid ?? "",
+        karigarName,
         customerUid: user.uid,
         customerName: user.displayName || "Guest",
         customerEmail: user.email || "",
@@ -170,8 +171,8 @@ const BookingPage = () => {
       setBooked(true);
     } catch (err) {
       console.error("Booking save failed:", err);
-      // Still mark as booked locally so the user sees success
-      setBooked(true);
+      alert("Booking failed. Please try again.");
+      return;
     }
   };
 
