@@ -131,24 +131,13 @@ const handleConfirm = async () => {
   console.log("craftsman id:", craftsman?.id);
 
   try {
-    const karigarDocSnap = craftsman?.id
-      ? await getDoc(doc(db, "craftsmen", craftsman.id))
-      : null;
-
-    console.log("karigar doc exists:", karigarDocSnap?.exists());
-    console.log("karigarUid:", karigarDocSnap?.data()?.userId);
-
-    const karigarUid = karigarDocSnap?.data()?.userId ?? "";
-    const karigarName =
-      karigarDocSnap?.data()?.personal?.profileName ||
-      karigarDocSnap?.data()?.personal?.name ||
-      craftsman?.name ||
-      "";
+    const karigarUid = craftsman?.userId || "";
+    const karigarName = craftsman?.name || "";
 
     const bookingRef = await addDoc(collection(db, "bookings"), {
       craftsmanId: craftsman?.id ?? "",
       craftsmanName: craftsman?.name ?? "",
-      karigarUid,
+      karigarUid: karigarUid,
       karigarName,
       customerUid: user.uid,
       customerName: user.displayName || "Guest",
