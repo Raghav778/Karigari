@@ -114,52 +114,59 @@ const BookingPage = () => {
     setBooked(false);
   };
 
-  const handleConfirm = async () => {
-    if (selectedDate === null || !selectedSlot) return;
+const handleConfirm = async () => {
+  if (selectedDate === null || !selectedSlot) return;
 
-    if (!user) {
-      setShowLoginPrompt(true);
-      setTimeout(() => {
-        setShowLoginPrompt(false);
-        setLoginOpen(true);
-      }, 1800);
-      return;
-    }
+  if (!user) {
+    setShowLoginPrompt(true);
+    setTimeout(() => {
+      setShowLoginPrompt(false);
+      setLoginOpen(true);
+    }, 1800);
+    return;
+  }
 
-    console.log("🔥 handleConfirm fired");
-    console.log("user.uid:", user.uid);
-    console.log("craftsman:", craftsman);
+  console.log("🔥 handleConfirm fired");
+  console.log("user.uid:", user.uid);
+  console.log("craftsman id:", craftsman?.id);
 
-    try {
-      const karigarDocSnap = craftsman?.id
-        ? await getDoc(doc(db, "craftsmen", craftsman.id))
-        : null;
+  try {
+    const karigarDocSnap = craftsman?.id
+      ? await getDoc(doc(db, "craftsmen", craftsman.id))
+      : null;
 
-      const karigarUid = karigarDocSnap?.data()?.userId ?? "";
-      console.log("karigarUid:", karigarUid);
-      console.log("karigarDoc exists:", karigarDocSnap?.exists());
+    console.log("karigar doc exists:", karigarDocSnap?.exists());
+    console.log("karigarUid:", karigarDocSnap?.data()?.userId);
 
-      const bookingRef = await addDoc(collection(db, "bookings"), {
-        craftsmanId: craftsman?.id ?? "",
-        craftsmanName: craftsman?.name ?? "",
-        karigarUid,
-        customerUid: user.uid,
-        customerName: user.displayName || "Guest",
-        customerEmail: user.email || "",
-        date: confirmedDate,
-        slot: selectedSlot,
-        status: "pending",
-        seenByKarigar: false,
-        createdAt: serverTimestamp(),
-      });
+    const karigarUid = karigarDocSnap?.data()?.userId ?? "";
+    const karigarName =
+      karigarDocSnap?.data()?.personal?.profileName ||
+      karigarDocSnap?.data()?.personal?.name ||
+      craftsman?.name ||
+      "";
 
-      console.log("✅ Booking saved! ID:", bookingRef.id);
-      setBooked(true);
-    } catch (err) {
-      console.error("❌ Booking failed:", err);
-      alert("Booking failed: " + (err as any).message);
-    }
-  };
+    const bookingRef = await addDoc(collection(db, "bookings"), {
+      craftsmanId: craftsman?.id ?? "",
+      craftsmanName: craftsman?.name ?? "",
+      karigarUid,
+      karigarName,
+      customerUid: user.uid,
+      customerName: user.displayName || "Guest",
+      customerEmail: user.email || "",
+      date: confirmedDate,
+      slot: selectedSlot,
+      status: "pending",
+      seenByKarigar: false,
+      createdAt: serverTimestamp(),
+    });
+
+    console.log("✅ Booking saved! ID:", bookingRef.id);
+    setBooked(true);
+  } catch (err: any) {
+    console.error("❌ Booking failed:", err);
+    alert("Booking failed: " + err.message);
+  }
+};
 
   return (
     <div style={creamBg}>
