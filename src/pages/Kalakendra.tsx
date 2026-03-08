@@ -42,67 +42,84 @@ const CATEGORY_CONFIG: Record<
 
 const CATEGORIES: EventCategory[] = ["Exhibition", "Mela", "Workshop", "News"];
 
-// ── AI fetch ──────────────────────────────────────────────────────────────────
+// ── Eventbrite fetch ──────────────────────────────────────────────────────────
 async function fetchCraftEvents(): Promise<CraftEvent[]> {
-  const today = new Date().toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
+  const TOKEN = import.meta.env.VITE_EVENTBRITE_TOKEN;
+
+  const params = new URLSearchParams({
+    q: "craft art handloom pottery textile",
+    "location.address": "India",
+    "location.within": "500km",
+    expand: "organizer,venue",
+    token: TOKEN,
   });
 
-  const prompt = `Today's date is ${today}. Search the web and find current and upcoming Indian craft-related events. Find:
-1. Craft exhibitions and art fairs happening in India (current month and next 2 months)
-2. Craft melas, haats, and bazaars (Surajkund, Dilli Haat, etc.)
-3. Craft workshops and training programmes
-4. Important craft industry news (awards, GI tags, government schemes, artisan stories)
+  const res = await fetch(
+    `https://www.eventbriteapi.com/v3/events/search/?${params}`
+  );
 
-For each event/news item, extract:
-- title
-- category (exactly one of: Exhibition, Mela, Workshop, News)
-- date (specific dates or date range like "12-15 March 2025")
-- location (city/venue, India)
-- time (if available, e.g. "10:00 AM - 8:00 PM")
-- description (2-3 sentences)
-- organizer (if known)
-- tags (2-4 relevant craft keywords like ["Handloom", "Rajasthan", "Pottery"])
+  if (!res.ok) throw new Error(`Eventbrite API error: ${res.status}`);
+  const data = await res.json();
 
-Return ONLY a valid JSON array. No markdown, no explanation, no backticks. Example format:
-[{"title":"...","category":"Exhibition","date":"...","location":"...","time":"...","description":"...","organizer":"...","tags":["...","..."]}]
+  return (data.events ?? []).map((ev: any): CraftEvent => {
+    const name = ev.name?.text ?? "Untitled Event";
+    const desc = (ev.description?.text ?? ev.summary ?? "").slice(0, 300);
+    const venue = ev.venue;
 
-Find at least 8-12 items total. Prioritise real, verifiable events. If you cannot find a specific event, include relevant craft news instead.`;
+    const location = venue
+      ? [venue.name, venue.address?.city, venue.address?.region]
+          .filter(Boolean)
+          .join(", ")
+      : "India";
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4000,
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
-      messages: [{ role: "user", content: prompt }],
-    }),
+    const startDate = ev.start?.local
+      ? new Date(ev.start.local).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      : "TBA";
+
+    const startTime = ev.start?.local
+      ? new Date(ev.start.local).toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : undefined;
+
+    // Auto-categorise based on keywords in the title
+    const lc = name.toLowerCase();
+    let category: EventCategory = "Exhibition";
+    if (lc.includes("workshop") || lc.includes("training")) {
+      category = "Workshop";
+    } else if (
+      lc.includes("mela") ||
+      lc.includes("haat") ||
+      lc.includes("bazaar") ||
+      lc.includes("fair")
+    ) {
+      category = "Mela";
+    } else if (
+      lc.includes("news") ||
+      lc.includes("award") ||
+      lc.includes("announce") ||
+      lc.includes("launch")
+    ) {
+      category = "News";
+    }
+
+    return {
+      title: name,
+      category,
+      date: startDate,
+      location,
+      time: startTime,
+      description: desc,
+      organizer: ev.organizer?.name,
+      link: ev.url,
+      tags: [],
+    };
   });
-
-  if (!response.ok) throw new Error("API request failed");
-  const data = await response.json();
-
-  // Extract the final text block from content array
-  const textBlock = data.content
-    ?.filter((b: any) => b.type === "text")
-    .map((b: any) => b.text)
-    .join("");
-
-  if (!textBlock) throw new Error("No text in response");
-
-  // Strip any accidental markdown fences
-  const clean = textBlock.replace(/```json|```/g, "").trim();
-
-  // Find JSON array in the response
-  const start = clean.indexOf("[");
-  const end = clean.lastIndexOf("]") + 1;
-  if (start === -1 || end === 0) throw new Error("No JSON array found");
-
-  const parsed: CraftEvent[] = JSON.parse(clean.slice(start, end));
-  return parsed;
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -273,10 +290,7 @@ const Kalakendra = () => {
             className="pt-8"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div
-                className="w-8 h-px"
-                style={{ background: "#c9a227" }}
-              />
+              <div className="w-8 h-px" style={{ background: "#c9a227" }} />
               <span className="font-body text-[10px] uppercase tracking-[3px] text-gold">
                 Live Updates
               </span>
@@ -293,7 +307,11 @@ const Kalakendra = () => {
             <div className="flex items-center gap-4">
               {lastUpdated && (
                 <span className="font-body text-xs text-parchment/40">
-                  Updated {lastUpdated.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                  Updated{" "}
+                  {lastUpdated.toLocaleTimeString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </span>
               )}
               <button
@@ -301,7 +319,10 @@ const Kalakendra = () => {
                 disabled={loading}
                 className="flex items-center gap-2 font-body text-xs uppercase tracking-[2px] px-4 py-2 border border-gold/40 text-gold hover:bg-gold/10 transition-all disabled:opacity-40"
               >
-                <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+                <RefreshCw
+                  size={12}
+                  className={loading ? "animate-spin" : ""}
+                />
                 {loading ? "Fetching…" : "Refresh"}
               </button>
             </div>
@@ -334,7 +355,7 @@ const Kalakendra = () => {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`flex-shrink-0 flex items-center gap-1.5 font-body text-xs uppercase tracking-[1.5px] px-4 py-2 border transition-all`}
+                  className="flex-shrink-0 flex items-center gap-1.5 font-body text-xs uppercase tracking-[1.5px] px-4 py-2 border transition-all"
                   style={
                     isActive
                       ? { borderColor: cfg.color, background: cfg.color, color: "white" }
@@ -391,11 +412,19 @@ const Kalakendra = () => {
                       <span className="text-heritage-heading font-semibold">
                         {filtered.length}
                       </span>{" "}
-                      {activeCategory === "All" ? "events & updates" : activeCategory.toLowerCase() + (filtered.length !== 1 ? "s" : "")} found
+                      {activeCategory === "All"
+                        ? "events & updates"
+                        : activeCategory.toLowerCase() +
+                          (filtered.length !== 1 ? "s" : "")}{" "}
+                      found
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                       {filtered.map((event, i) => (
-                        <EventCard key={`${event.title}-${i}`} event={event} index={i} />
+                        <EventCard
+                          key={`${event.title}-${i}`}
+                          event={event}
+                          index={i}
+                        />
                       ))}
                     </div>
                   </>

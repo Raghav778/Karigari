@@ -206,50 +206,23 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, [regionsOpen, langOpen, showSuggestions]);
 
-  const suggestions = useMemo<Suggestion[]>(() => {
-    const q = searchQuery.trim().toLowerCase();
+  const suggestions = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
     if (!q) return [];
-    const results: Suggestion[] = [];
-    craftsmen.forEach((c) => {
-      if (
-        c.name.toLowerCase().includes(q) ||
-        c.craft.toLowerCase().includes(q) ||
-        c.location.toLowerCase().includes(q)
+
+    const allCrafts: Suggestion[] = crafts.map((c: any) => ({
+      kind: "craft" as SuggestionKind,
+      label: c.name || c,
+      sublabel: "Craft",
+      path: `/discover?craft=${encodeURIComponent(c.name || c)}`,
+    }));
+
+    return [...STATIC_PAGES, ...REGIONS, ...allCrafts, ...firestoreArtisans]
+      .filter(
+        (s) =>
+          s.label.toLowerCase().includes(q) ||
+          s.sublabel?.toLowerCase().includes(q),
       )
-        results.push({
-          kind: "artisan",
-          label: c.name,
-          sublabel: `${c.craft} · ${c.location}`,
-          path: `/craftsman/${c.id}`,
-        });
-    });
-    firestoreArtisans.forEach((s) => {
-      if (
-        s.label.toLowerCase().includes(q) ||
-        (s.sublabel || "").toLowerCase().includes(q)
-      )
-        results.push(s);
-    });
-    crafts.forEach((c) => {
-      if (
-        c.name.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q) ||
-        c.region.toLowerCase().includes(q)
-      )
-        results.push({
-          kind: "craft",
-          label: c.name,
-          sublabel: `${c.category} · ${c.region}`,
-          path: `/discover?craft=${c.id}`,
-        });
-    });
-    REGIONS.forEach((r) => {
-      if (r.label.toLowerCase().includes(q)) results.push(r);
-    });
-    STATIC_PAGES.forEach((p) => {
-      if (p.label.toLowerCase().includes(q)) results.push(p);
-    });
-    return results
       .sort((a, b) => {
         const aStarts = a.label.toLowerCase().startsWith(q) ? 0 : 1;
         const bStarts = b.label.toLowerCase().startsWith(q) ? 0 : 1;
@@ -272,6 +245,8 @@ const Navbar = () => {
   };
 
   const regionGroups = [{ label: "Rajasthan" }, { label: "Madhya Pradesh" }];
+
+  // ── Kalakendra removed from navGroups (moved to Footer) ───────────────────
   const navGroups = [
     {
       label: t.nav.regions,
@@ -285,7 +260,6 @@ const Navbar = () => {
       items: [
         { name: t.nav.discover, path: "/discover" },
         { name: t.nav.archive, path: "/archive" },
-        { name: "Kalakendra", path: "/kalakendra" },
       ],
     },
   ];
@@ -315,103 +289,38 @@ const Navbar = () => {
             className="fixed inset-0 z-[500] flex flex-col items-center justify-center"
             style={{
               background:
-                "linear-gradient(135deg, hsl(20 40% 8%), hsl(22 60% 12%), hsl(20 40% 8%))",
+                "linear-gradient(135deg, hsl(20 40% 8%), hsl(22 60% 12%))",
             }}
           >
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  "radial-gradient(ellipse at center, hsl(38 80% 40% / 0.15) 0%, transparent 70%)",
-              }}
-            />
             <motion.div
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
-              className="absolute top-0 left-0 right-0 h-[2px]"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent, hsl(38 80% 55%), transparent)",
-              }}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.7, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{
-                duration: 0.6,
-                delay: 0.15,
-                ease: [0.34, 1.56, 0.64, 1],
-              }}
-              className="mb-6"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-col items-center gap-4"
             >
               <img
                 src={logo}
                 alt="Karigarh"
-                className="w-20 h-20 object-cover rounded-full ring-2 ring-gold/40"
-                style={{
-                  filter: "drop-shadow(0 0 18px hsl(38 80% 55% / 0.5))",
-                }}
+                className="w-16 h-16 rounded-full object-cover opacity-80"
               />
-            </motion.div>
-            <motion.p
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.35 }}
-              className="font-display text-xl uppercase tracking-[4px] text-parchment mb-2"
-            >
-              Until Next Time
-            </motion.p>
-            <motion.div
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
-              className="w-24 h-[1px] mb-4"
-              style={{
-                background:
-                  "linear-gradient(90deg, transparent, hsl(38 80% 55%), transparent)",
-              }}
-            />
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-              className="font-body text-xs uppercase tracking-[3px] opacity-50 text-parchment"
-            >
-              Signing out...
-            </motion.p>
-            <motion.div
-              className="absolute bottom-0 left-0 h-[3px]"
-              style={{
-                background:
-                  "linear-gradient(90deg, hsl(22 100% 50%), hsl(38 80% 55%))",
-              }}
-              initial={{ width: "0%" }}
-              animate={{ width: "100%" }}
-              transition={{ duration: 1.8, ease: "easeInOut" }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Welcome Toast */}
-      <AnimatePresence>
-        {welcomeName && (
-          <motion.div
-            key="welcome-toast"
-            initial={{ opacity: 0, y: -48 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -48 }}
-            transition={{ type: "spring", stiffness: 320, damping: 28 }}
-            className="fixed top-20 left-0 right-0 z-[300] flex justify-center pointer-events-none"
-          >
-            <div className="flex items-center gap-2.5 bg-sandstone border border-[#e8740e]/60 shadow-lg px-5 py-2.5 rounded-full pointer-events-auto">
-              <span className="w-2 h-2 rounded-full bg-[#e8740e] flex-shrink-0" />
-              <p className="font-display text-sm uppercase tracking-[1.5px] text-heritage-heading">
-                Welcome, <span className="text-[#e8740e]">{welcomeName}</span>
+              <p className="font-display text-sm uppercase tracking-[3px] text-parchment/80">
+                Logging out…
               </p>
-              <span className="w-2 h-2 rounded-full bg-[#e8740e] flex-shrink-0" />
-            </div>
+              <div className="flex gap-1.5">
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    className="w-2 h-2 rounded-full bg-[#e8740e]"
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 1,
+                      delay: i * 0.2,
+                    }}
+                  />
+                ))}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -447,7 +356,6 @@ const Navbar = () => {
                   onItemClick={(href) => navigate(href)}
                 />
               </div>
-
             </div>
 
             {/* CENTER: Regions | Search | Language */}
@@ -456,7 +364,9 @@ const Navbar = () => {
               <div ref={regionsRef} className="relative">
                 <button
                   onClick={() => setRegionsOpen(!regionsOpen)}
-                  className={`flex items-center gap-1 font-display text-sm uppercase tracking-[1px] transition-colors hover:text-heritage-gold ${isDark ? "text-white" : "text-heritage-heading"}`}
+                  className={`flex items-center gap-1 font-display text-sm uppercase tracking-[1px] transition-colors hover:text-heritage-gold ${
+                    isDark ? "text-white" : "text-heritage-heading"
+                  }`}
                 >
                   {selectedRegion || t.nav.regions}
                   <ChevronDown
@@ -504,17 +414,14 @@ const Navbar = () => {
                     setSearchQuery(e.target.value);
                     setShowSuggestions(true);
                   }}
-                  onFocus={() => {
-                    if (searchQuery) setShowSuggestions(true);
-                  }}
-                  className="pl-8 pr-4 py-1.5 text-sm font-body bg-white/60 border border-gold/40 text-heritage-heading placeholder:text-heritage-heading/40 focus:outline-none focus:border-heritage-gold w-44 transition-all rounded-full"
+                  onFocus={() => setShowSuggestions(true)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleSearchSubmit();
-                    if (e.key === "Escape") {
-                      setShowSuggestions(false);
-                      setSearchQuery("");
-                    }
+                    if (e.key === "Escape") setShowSuggestions(false);
                   }}
+                  className={`pl-9 pr-4 py-1.5 font-body text-sm border border-gold/30 bg-transparent focus:outline-none focus:border-gold/60 w-48 transition-all focus:w-64 placeholder:text-heritage-heading/40 ${
+                    isDark ? "text-white" : "text-heritage-heading"
+                  }`}
                 />
                 <AnimatePresence>
                   {showSuggestions && suggestions.length > 0 && (
@@ -522,45 +429,32 @@ const Navbar = () => {
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 6 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute top-full left-0 mt-1 w-72 bg-sandstone border border-gold/50 shadow-2xl z-50 overflow-hidden rounded-lg"
+                      className="absolute top-full left-0 mt-1 w-72 bg-sandstone border border-gold/40 shadow-xl z-20 py-1"
                     >
                       {suggestions.map((s, i) => (
                         <button
                           key={i}
                           onClick={() => handleSuggestionClick(s)}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-parchment transition-colors border-b border-gold/10 last:border-0 group"
+                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-parchment/60 transition-colors text-left"
                         >
-                          <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-[#e8740e]/15 text-[#e8740e] group-hover:bg-[#e8740e]/25 transition-colors">
+                          <span className="text-heritage-gold/70 flex-shrink-0">
                             {kindIcon[s.kind]}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className="font-body text-sm text-heritage-heading truncate leading-tight">
+                            <p className="font-display text-xs text-heritage-heading truncate">
                               {s.label}
                             </p>
                             {s.sublabel && (
-                              <p className="font-body text-xs text-muted-foreground truncate mt-0.5">
+                              <p className="font-body text-[10px] text-muted-foreground truncate">
                                 {s.sublabel}
                               </p>
                             )}
                           </div>
-                          <span className="flex-shrink-0 font-display text-[9px] uppercase tracking-[1px] text-[#e8740e]/70 group-hover:text-[#e8740e] transition-colors">
+                          <span className="font-body text-[9px] uppercase tracking-[1px] text-muted-foreground/60 flex-shrink-0">
                             {kindLabel[s.kind]}
                           </span>
                         </button>
                       ))}
-                      <button
-                        onClick={handleSearchSubmit}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 bg-parchment/60 hover:bg-parchment transition-colors border-t border-gold/20"
-                      >
-                        <Search size={12} className="text-[#e8740e]" />
-                        <span className="font-body text-xs text-heritage-heading/70">
-                          Search all for{" "}
-                          <span className="text-[#e8740e] font-medium">
-                            "{searchQuery}"
-                          </span>
-                        </span>
-                      </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -570,10 +464,16 @@ const Navbar = () => {
               <div ref={langRef} className="relative">
                 <button
                   onClick={() => setLangOpen(!langOpen)}
-                  className={`flex items-center gap-1 font-display text-xs uppercase tracking-[1px] transition-colors hover:text-heritage-gold ${isDark ? "text-white/80" : "text-heritage-heading/70"}`}
+                  className={`flex items-center gap-1 font-display text-sm uppercase tracking-[1px] transition-colors hover:text-heritage-gold ${
+                    isDark ? "text-white" : "text-heritage-heading"
+                  }`}
                 >
                   <Globe size={14} />
                   {lang.toUpperCase()}
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform ${langOpen ? "rotate-180" : ""}`}
+                  />
                 </button>
                 <AnimatePresence>
                   {langOpen && (
@@ -590,7 +490,11 @@ const Navbar = () => {
                             setLang(language.code as any);
                             setLangOpen(false);
                           }}
-                          className={`w-full px-4 py-2 text-left font-body text-sm text-heritage-heading hover:bg-parchment transition-colors flex items-center justify-between ${lang === language.code ? "ring-2 ring-heritage-gold" : ""}`}
+                          className={`w-full flex items-center justify-between px-4 py-2.5 font-body text-sm transition-colors hover:bg-parchment/50 ${
+                            lang === language.code
+                              ? "text-heritage-gold ring-2 ring-heritage-gold"
+                              : "text-heritage-heading"
+                          }`}
                         >
                           <span>{language.name}</span>
                           {lang === language.code && (
@@ -604,41 +508,17 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* RIGHT: Kalakendra + Auth */}
+            {/* RIGHT: Auth only (Kalakendra moved to Footer) */}
             <div className="hidden md:flex items-center gap-6">
-              {/* Kalakendra — same pill style as GooeyNav buttons */}
-              <Link
-                to="/kalakendra"
-                style={{
-                  borderRadius: "100vw",
-                  padding: "0.5em 0.9em",
-                  fontFamily: "'Cinzel', serif",
-                  fontSize: "0.7rem",
-                  textTransform: "uppercase",
-                  letterSpacing: "2px",
-                  textDecoration: "none",
-                  transition: "background 0.3s ease, color 0.3s ease",
-                  background:
-                    location.pathname === "/kalakendra"
-                      ? "linear-gradient(135deg, hsl(22 100% 50%), hsl(33 100% 50%))"
-                      : "transparent",
-                  color:
-                    location.pathname === "/kalakendra"
-                      ? "hsl(40 50% 95%)"
-                      : isDark
-                      ? "white"
-                      : "black",
-                }}
-              >
-                Kalakendra
-              </Link>
               <div className="flex items-center gap-3">
                 {user ? (
                   <>
                     {!isKarigar && (
                       <Link
                         to="/my-bookings"
-                        className={`px-3 py-0 text-sm font-display uppercase tracking-[1px] hover:text-heritage-gold transition-colors ${isDark ? "text-white" : "text-heritage-heading"}`}
+                        className={`px-3 py-0 text-sm font-display uppercase tracking-[1px] hover:text-heritage-gold transition-colors ${
+                          isDark ? "text-white" : "text-heritage-heading"
+                        }`}
                       >
                         My Bookings
                       </Link>
@@ -647,14 +527,18 @@ const Navbar = () => {
                     {isKarigar ? (
                       <Link
                         to="/karigar-profile"
-                        className={`text-sm font-display uppercase tracking-[1px] hover:text-gold transition-colors underline-offset-2 hover:underline ${isDark ? "text-white" : "text-heritage-heading"}`}
+                        className={`text-sm font-display uppercase tracking-[1px] hover:text-gold transition-colors underline-offset-2 hover:underline ${
+                          isDark ? "text-white" : "text-heritage-heading"
+                        }`}
                         title="View your karigar profile"
                       >
                         {firstName}
                       </Link>
                     ) : (
                       <span
-                        className={`text-sm font-display uppercase tracking-[1px] ${isDark ? "text-white" : "text-heritage-heading"}`}
+                        className={`text-sm font-display uppercase tracking-[1px] ${
+                          isDark ? "text-white" : "text-heritage-heading"
+                        }`}
                       >
                         {firstName}
                       </span>
@@ -663,47 +547,26 @@ const Navbar = () => {
                     <button
                       onClick={logout}
                       disabled={loggingOut}
-                      className={`px-3 py-0 text-sm rounded-3xl font-display uppercase tracking-[1px] hover:text-heritage-gold transition-colors flex items-center gap-1.5 disabled:opacity-60 ${isDark ? "text-white" : "text-heritage-heading"}`}
+                      className="px-3 py-1.5 text-sm rounded-3xl font-display uppercase tracking-[1px] border border-gold/40 hover:text-heritage-gold hover:border-gold transition-colors disabled:opacity-50"
                     >
-                      {loggingOut ? (
-                        <>
-                          <svg
-                            className="animate-spin h-3 w-3"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            />
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8v8z"
-                            />
-                          </svg>
-                          Signing out...
-                        </>
-                      ) : (
-                        "Logout"
-                      )}
+                      Logout
                     </button>
                   </>
                 ) : (
                   <>
                     <button
                       onClick={() => setLoginOpen(true)}
-                      className={`px-3 py-1.5 text-sm rounded-3xl font-display uppercase tracking-[1px] transition-colors hover:text-heritage-gold ${isDark ? "text-white" : "text-heritage-heading"}`}
+                      className={`px-3 py-1.5 text-sm rounded-3xl font-display uppercase tracking-[1px] transition-colors hover:text-heritage-gold ${
+                        isDark ? "text-white" : "text-heritage-heading"
+                      }`}
                     >
                       {t.nav.login}
                     </button>
                     <button
                       onClick={() => navigate("/signup")}
-                      className={`px-3 py-1.5 text-sm rounded-3xl font-display uppercase tracking-[1px] transition-colors hover:text-heritage-gold ${isDark ? "text-white" : "text-heritage-heading"}`}
+                      className={`px-3 py-1.5 text-sm rounded-3xl font-display uppercase tracking-[1px] transition-colors hover:text-heritage-gold ${
+                        isDark ? "text-white" : "text-heritage-heading"
+                      }`}
                     >
                       {t.nav.signUp}
                     </button>
@@ -713,7 +576,9 @@ const Navbar = () => {
               <button
                 onClick={toggle}
                 aria-label="Toggle dark mode"
-                className={`p-2 transition-colors hover:text-heritage-gold ${isDark ? "text-white" : "text-heritage-heading"}`}
+                className={`p-2 transition-colors hover:text-heritage-gold ${
+                  isDark ? "text-white" : "text-heritage-heading"
+                }`}
               >
                 {isDark ? <Sun size={18} /> : <Moon size={18} />}
               </button>
@@ -768,79 +633,70 @@ const Navbar = () => {
                         setLang(language.code as any);
                         setOpen(false);
                       }}
-                      className={`px-3 py-1 font-body text-xs border transition-colors ${lang === language.code ? "border-heritage-gold text-heritage-gold" : "border-gold/40 text-heritage-heading/70"}`}
+                      className={`px-3 py-1 font-body text-xs border transition-colors ${
+                        lang === language.code
+                          ? "border-gold bg-gold/10 text-heritage-gold"
+                          : "border-gold/30 text-heritage-heading"
+                      }`}
                     >
                       {language.name}
                     </button>
                   ))}
                 </div>
               </div>
-              <div className="p-4 border-b border-gold/20 flex items-center justify-between">
-                <h3 className="font-display text-sm uppercase tracking-[2px] text-heritage-heading">
-                  Appearance
-                </h3>
-                <button
-                  onClick={toggle}
-                  aria-label="Toggle dark mode"
-                  className="p-2 text-heritage-heading hover:text-heritage-gold transition-colors"
-                >
-                  {isDark ? <Sun size={18} /> : <Moon size={18} />}
-                </button>
-              </div>
-              {!user ? (
-                <div className="bg-sandstone p-4 border border-gold">
-                  <h3 className="font-display text-sm uppercase tracking-[2px] text-heritage-heading mb-3">
-                    Account
-                  </h3>
-                  <div className="flex flex-col gap-2">
+
+              {/* Mobile auth */}
+              <div className="p-4">
+                {user ? (
+                  <div className="space-y-2">
+                    <p className="font-body text-sm text-heritage-heading">
+                      Welcome,{" "}
+                      {isKarigar ? (
+                        <Link
+                          to="/karigar-profile"
+                          className="font-semibold text-gold hover:underline"
+                          onClick={() => setOpen(false)}
+                          title="View your karigar profile"
+                        >
+                          {firstName}
+                        </Link>
+                      ) : (
+                        <span className="font-semibold">{firstName}</span>
+                      )}
+                    </p>
                     <button
                       onClick={() => {
+                        logout();
                         setOpen(false);
-                        setLoginOpen(true);
                       }}
-                      className="btn-primary text-center text-xs py-2 rounded-3xl"
+                      className="btn-primary text-center text-xs py-2 rounded-3xl w-full"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setLoginOpen(true);
+                        setOpen(false);
+                      }}
+                      className="flex-1 py-2 font-display text-xs uppercase tracking-[1px] border border-gold/40 text-heritage-heading hover:text-heritage-gold transition-colors"
                     >
                       {t.nav.login}
                     </button>
                     <button
                       onClick={() => {
-                        setOpen(false);
                         navigate("/signup");
+                        setOpen(false);
                       }}
-                      className="btn-primary text-center text-xs py-2 rounded-3xl"
+                      className="flex-1 py-2 font-display text-xs uppercase tracking-[1px] border border-gold/40 text-heritage-heading hover:text-heritage-gold transition-colors"
                     >
                       {t.nav.signUp}
                     </button>
                   </div>
-                </div>
-              ) : (
-                <div className="bg-sandstone p-4 border border-gold">
-                  <p className="font-body text-sm text-heritage-heading mb-2">
-                    Signed in as{" "}
-                    {isKarigar ? (
-                      <Link
-                        to="/karigar-profile"
-                        className="font-semibold text-gold hover:underline"
-                        onClick={() => setOpen(false)}
-                        title="View your karigar profile"
-                      >
-                        {firstName}
-                      </Link>
-                    ) : (
-                      <span className="font-semibold">{firstName}</span>
-                    )}
-                  </p>
-                  <button
-                    onClick={() => {
-                      logout();
-                      setOpen(false);
-                    }}
-                    className="btn-primary text-center text-xs py-2 rounded-3xl w-full"
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
