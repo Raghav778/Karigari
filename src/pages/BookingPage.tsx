@@ -114,52 +114,48 @@ const BookingPage = () => {
     setBooked(false);
   };
 
-  const handleConfirm = async () => {
-    if (selectedDate === null || !selectedSlot) return;
+const handleConfirm = async () => {
+  if (selectedDate === null || !selectedSlot) return;
 
-    if (!user) {
-      setShowLoginPrompt(true);
-      setTimeout(() => {
-        setShowLoginPrompt(false);
-        setLoginOpen(true);
-      }, 1800);
-      return;
-    }
+  if (!user) {
+    setShowLoginPrompt(true);
+    setTimeout(() => {
+      setShowLoginPrompt(false);
+      setLoginOpen(true);
+    }, 1800);
+    return;
+  }
 
-    console.log("🔥 handleConfirm fired");
-    console.log("user.uid:", user.uid);
-    console.log("craftsman:", craftsman);
+  console.log("🔥 handleConfirm fired");
+  console.log("user.uid:", user.uid);
+  console.log("craftsman id:", craftsman?.id);
 
-    try {
-      const karigarDocSnap = craftsman?.id
-        ? await getDoc(doc(db, "craftsmen", craftsman.id))
-        : null;
+  try {
+    const karigarUid = craftsman?.userId || "";
+    const karigarName = craftsman?.name || "";
 
-      const karigarUid = karigarDocSnap?.data()?.userId ?? "";
-      console.log("karigarUid:", karigarUid);
-      console.log("karigarDoc exists:", karigarDocSnap?.exists());
+    const bookingRef = await addDoc(collection(db, "bookings"), {
+      craftsmanId: craftsman?.id ?? "",
+      craftsmanName: craftsman?.name ?? "",
+      karigarUid: karigarUid,
+      karigarName,
+      customerUid: user.uid,
+      customerName: user.displayName || "Guest",
+      customerEmail: user.email || "",
+      date: confirmedDate,
+      slot: selectedSlot,
+      status: "pending",
+      seenByKarigar: false,
+      createdAt: serverTimestamp(),
+    });
 
-      const bookingRef = await addDoc(collection(db, "bookings"), {
-        craftsmanId: craftsman?.id ?? "",
-        craftsmanName: craftsman?.name ?? "",
-        karigarUid,
-        customerUid: user.uid,
-        customerName: user.displayName || "Guest",
-        customerEmail: user.email || "",
-        date: confirmedDate,
-        slot: selectedSlot,
-        status: "pending",
-        seenByKarigar: false,
-        createdAt: serverTimestamp(),
-      });
-
-      console.log("✅ Booking saved! ID:", bookingRef.id);
-      setBooked(true);
-    } catch (err) {
-      console.error("❌ Booking failed:", err);
-      alert("Booking failed: " + (err as any).message);
-    }
-  };
+    console.log("✅ Booking saved! ID:", bookingRef.id);
+    setBooked(true);
+  } catch (err: any) {
+    console.error("❌ Booking failed:", err);
+    alert("Booking failed: " + err.message);
+  }
+};
 
   return (
     <div style={creamBg}>
