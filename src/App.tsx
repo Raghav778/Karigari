@@ -25,6 +25,7 @@ import AdminKarigarRequests from "@/pages/AdminKarigarRequests";
 import MyBookings from "@/pages/MyBookings";
 import SeedCraftsmen from "./pages/SeedCraftsmen";
 import AdminImageUploader from "./pages/AdminImageUploader";
+import Kalakendra from "./pages/Kalakendra";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => {
                 <ScrollToTop />
                 <Navbar />
                 <Routes>
+                  <Route path="/kalakendra" element={<Kalakendra />} />
                   <Route path="/" element={<Home />} />
                   <Route path="/discover" element={<Discover />} />
                   <Route path="/region/:region" element={<Region />} />

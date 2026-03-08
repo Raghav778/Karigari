@@ -1,17 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import {
-  Menu,
-  X,
-  Search,
-  ChevronDown,
-  Globe,
-  Moon,
-  Sun,
-  User,
-  BookOpen,
-  Map,
-  Palette,
-} from "lucide-react";
+import { Menu, X, Search, ChevronDown, Globe, Moon, Sun, User, BookOpen, Map, Palette } from "lucide-react";
 import { craftsmen } from "@/data/craftsmen";
 import { crafts } from "@/data/crafts";
 import {
@@ -57,6 +45,12 @@ const STATIC_PAGES: Suggestion[] = [
   },
   {
     kind: "page",
+    label: "Kalakendra",
+    sublabel: "Craft news & events",
+    path: "/kalakendra",
+  },
+  {
+    kind: "page",
     label: "Heritage Archive",
     sublabel: "Articles & research",
     path: "/archive",
@@ -68,6 +62,7 @@ const STATIC_PAGES: Suggestion[] = [
     path: "/join",
   },
 ];
+
 const REGIONS: Suggestion[] = [
   {
     kind: "region",
@@ -82,6 +77,7 @@ const REGIONS: Suggestion[] = [
     path: "/region/Madhya%20Pradesh",
   },
 ];
+
 const kindIcon: Record<SuggestionKind, React.ReactNode> = {
   artisan: <User size={11} />,
   craft: <Palette size={11} />,
@@ -103,7 +99,7 @@ const Navbar = () => {
   const [showLogoutAnim, setShowLogoutAnim] = useState(false);
   const [userName, setUserName] = useState("");
   const firstName = (userName || user?.displayName || "User").split(" ")[0];
-  const [isKarigar, setIsKarigar] = useState(false); // ← NEW
+  const [isKarigar, setIsKarigar] = useState(false);
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -130,7 +126,7 @@ const Navbar = () => {
             path: `/craftsman/${d.id}`,
           };
         })
-        .filter((s) => s.label); // skip entries with no name
+        .filter((s) => s.label);
       setFirestoreArtisans(results);
     });
   }, []);
@@ -158,7 +154,6 @@ const Navbar = () => {
     setShowLogoutAnim(false);
   };
 
-  // ── Fetch user name + check if karigar ──────────────────────────────────
   useEffect(() => {
     if (!user) {
       setUserName("");
@@ -290,14 +285,18 @@ const Navbar = () => {
       items: [
         { name: t.nav.discover, path: "/discover" },
         { name: t.nav.archive, path: "/archive" },
+        { name: "Kalakendra", path: "/kalakendra" },
       ],
     },
   ];
+
+  // ── Single declaration of gooeyItems ──────────────────────────────────────
   const gooeyItems = [
     { label: t.nav.home, href: "/" },
     { label: t.nav.archive, href: "/archive" },
     { label: t.nav.discover, href: "/discover" },
   ];
+
   const activeIdx = gooeyItems.findIndex(
     (item) => item.href === location.pathname,
   );
@@ -434,6 +433,7 @@ const Navbar = () => {
                   className="h-14 w-14 object-cover rounded-full"
                 />
               </Link>
+
               <div className="hidden md:block">
                 <GooeyNav
                   key={`${location.pathname}-${lang}`}
@@ -447,6 +447,7 @@ const Navbar = () => {
                   onItemClick={(href) => navigate(href)}
                 />
               </div>
+
             </div>
 
             {/* CENTER: Regions | Search | Language */}
@@ -603,12 +604,37 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* RIGHT: Auth */}
+            {/* RIGHT: Kalakendra + Auth */}
             <div className="hidden md:flex items-center gap-6">
+              {/* Kalakendra — same pill style as GooeyNav buttons */}
+              <Link
+                to="/kalakendra"
+                style={{
+                  borderRadius: "100vw",
+                  padding: "0.5em 0.9em",
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: "0.7rem",
+                  textTransform: "uppercase",
+                  letterSpacing: "2px",
+                  textDecoration: "none",
+                  transition: "background 0.3s ease, color 0.3s ease",
+                  background:
+                    location.pathname === "/kalakendra"
+                      ? "linear-gradient(135deg, hsl(22 100% 50%), hsl(33 100% 50%))"
+                      : "transparent",
+                  color:
+                    location.pathname === "/kalakendra"
+                      ? "hsl(40 50% 95%)"
+                      : isDark
+                      ? "white"
+                      : "black",
+                }}
+              >
+                Kalakendra
+              </Link>
               <div className="flex items-center gap-3">
                 {user ? (
                   <>
-                    {/* ── Karigar-aware name display ───────────── */}
                     {!isKarigar && (
                       <Link
                         to="/my-bookings"
@@ -789,7 +815,6 @@ const Navbar = () => {
                 </div>
               ) : (
                 <div className="bg-sandstone p-4 border border-gold">
-                  {/* ── Karigar-aware mobile name ──────────────── */}
                   <p className="font-body text-sm text-heritage-heading mb-2">
                     Signed in as{" "}
                     {isKarigar ? (
