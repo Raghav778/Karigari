@@ -152,6 +152,7 @@ const TagPill = ({ label, onRemove }:{ label:string; onRemove:()=>void }) => (
 export default function Join() {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
 
 useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -204,7 +205,7 @@ useEffect(() => {
   const [errors,            setErrors]            = useState<Record<string,string>>({});
   const [submitted,         setSubmitted]         = useState(false);
   const [isSubmitting,      setIsSubmitting]      = useState(false); 
-  const [currentUser, setCurrentUser] = useState(auth.currentUser);
+  
 
   const mediaRef = useRef<HTMLInputElement>(null);
   const certRef  = useRef<HTMLInputElement>(null);
