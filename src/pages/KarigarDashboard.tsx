@@ -1,19 +1,19 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useBackground } from "@/hooks/useBackground";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   collection, query, where, getDocs,
-  doc, updateDoc, orderBy, Timestamp,
+  doc, updateDoc, Timestamp,
+  onSnapshot, addDoc, serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import {
-  ArrowLeft, Calendar, Clock, CheckCircle2, XCircle,
+  ArrowLeft, Calendar, Clock, CheckCircle2,
   LayoutDashboard, User, Phone, Mail, IndianRupee,
-  RefreshCw, Eye, TrendingUp, Hourglass, Ban,
-  ChevronRight, X, Check, AlertCircle, Inbox,
-  Star, SlidersHorizontal,
+  Eye, TrendingUp, Hourglass, Ban,
+  X, Check, Inbox, Star, Bell,
 } from "lucide-react";
 
 // ─── Textures ─────────────────────────────────────────────────────────────────
@@ -48,29 +48,11 @@ const S: Record<BookingStatus, {
   label: string; color: string; bg: string; border: string; dot: string;
   icon: React.ElementType; actionNext?: BookingStatus; actionLabel?: string;
 }> = {
-  pending:   {
-    label: "Pending",   color: "text-amber-700",   bg: "bg-amber-50",
-    border: "border-amber-200",   dot: "bg-amber-500",   icon: Hourglass,
-    actionNext: "confirmed", actionLabel: "Accept",
-  },
-  confirmed: {
-    label: "Confirmed", color: "text-blue-700",    bg: "bg-blue-50",
-    border: "border-blue-200",    dot: "bg-blue-500",    icon: CheckCircle2,
-    actionNext: "active", actionLabel: "Mark Active",
-  },
-  active:    {
-    label: "Active",    color: "text-emerald-700", bg: "bg-emerald-50",
-    border: "border-emerald-200", dot: "bg-emerald-500", icon: TrendingUp,
-    actionNext: "completed", actionLabel: "Mark Completed",
-  },
-  completed: {
-    label: "Completed", color: "text-slate-600",   bg: "bg-slate-50",
-    border: "border-slate-200",   dot: "bg-slate-400",   icon: Star,
-  },
-  cancelled: {
-    label: "Cancelled", color: "text-red-600",     bg: "bg-red-50",
-    border: "border-red-200",     dot: "bg-red-400",     icon: Ban,
-  },
+  pending:   { label: "Pending",   color: "text-amber-700",   bg: "bg-amber-50",   border: "border-amber-200",   dot: "bg-amber-500",   icon: Hourglass,    actionNext: "confirmed", actionLabel: "Accept"         },
+  confirmed: { label: "Confirmed", color: "text-blue-700",    bg: "bg-blue-50",    border: "border-blue-200",    dot: "bg-blue-500",    icon: CheckCircle2, actionNext: "active",    actionLabel: "Mark Active"    },
+  active:    { label: "Active",    color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", dot: "bg-emerald-500", icon: TrendingUp,   actionNext: "completed", actionLabel: "Mark Completed" },
+  completed: { label: "Completed", color: "text-slate-600",   bg: "bg-slate-50",   border: "border-slate-200",   dot: "bg-slate-400",   icon: Star                                                               },
+  cancelled: { label: "Cancelled", color: "text-red-600",     bg: "bg-red-50",     border: "border-red-200",     dot: "bg-red-400",     icon: Ban                                                                },
 };
 
 type TabKey = "all" | BookingStatus;
@@ -91,332 +73,241 @@ const formatDate = (ts: any): string => {
 };
 
 const Spin = () => (
-  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-  </svg>
+  <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
 );
 
-// ─── Skeleton loader ───────────────────────────────────────────────────────────
 const Skeleton = () => (
-  <div className="min-h-screen pt-[70px] flex items-center justify-center" style={{ backgroundImage: MANDALA_BG, backgroundColor: "hsl(var(--parchment))" }}>
-    <div className="text-center">
-      <div className="relative mx-auto w-16 h-16 mb-6">
-        <div className="absolute inset-0 border rounded-full animate-ping opacity-30" style={{ borderColor: `${ORG}60` }} />
-        <div className="w-16 h-16 border flex items-center justify-center bg-sandstone rounded-full" style={{ borderColor: `${ORG}80` }}>
-          <LayoutDashboard size={24} style={{ color: ORG }} />
-        </div>
-      </div>
-      <p className="font-display text-sm uppercase tracking-[2px] text-muted-foreground">Loading dashboard…</p>
-    </div>
+  <div className="min-h-screen bg-parchment flex items-center justify-center">
+    <div className="w-8 h-8 border-2 rounded-full animate-spin"
+      style={{ borderColor: `${ORG} transparent transparent transparent` }} />
   </div>
 );
 
-// ─── Stat card ─────────────────────────────────────────────────────────────────
-const StatCard = ({ label, value, icon: Icon, accent, onClick, active }: {
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+const StatCard = ({ label, value, icon: Icon, accent, active, onClick }: {
   label: string; value: number; icon: React.ElementType;
-  accent: string; onClick: () => void; active: boolean;
+  accent: string; active: boolean; onClick: () => void;
 }) => (
-  <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
-    onClick={onClick}
-    className="w-full text-left p-5 border transition-all duration-200 relative overflow-hidden"
-    style={{
-      borderColor: active ? accent : `${accent}30`,
-      background: active ? `${accent}08` : "hsl(var(--sandstone))",
-      backgroundImage: JALI_BG,
-    }}>
-    {active && <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: accent }} />}
-    <div className="flex items-start justify-between relative z-10">
-      <div>
-        <p className="font-body text-[10px] uppercase tracking-[2px] text-muted-foreground mb-2">{label}</p>
-        <p className="font-display text-3xl" style={{ color: active ? accent : "hsl(var(--heritage-heading))" }}>{value}</p>
-      </div>
-      <div className="w-9 h-9 flex items-center justify-center border" style={{ borderColor: `${accent}40`, background: `${accent}12` }}>
-        <Icon size={16} style={{ color: accent }} />
-      </div>
+  <motion.button whileHover={{ y: -2 }} onClick={onClick}
+    className={`p-4 border text-left transition-all ${active ? "shadow-sm" : ""}`}
+    style={{ borderColor: active ? accent : `${accent}30`, background: active ? `${accent}12` : "hsl(var(--sandstone))" }}>
+    <div className="flex items-center gap-2 mb-2">
+      <Icon size={14} style={{ color: accent }} />
+      <span className="font-body text-[10px] uppercase tracking-[1.5px] text-muted-foreground">{label}</span>
     </div>
+    <p className="font-display text-2xl" style={{ color: accent }}>{value}</p>
   </motion.button>
 );
 
-// ─── Booking card ──────────────────────────────────────────────────────────────
+// ─── New Booking Alert Banners ─────────────────────────────────────────────────
+const NewBookingAlert = ({ bookings, onAction, onDismiss, updating }: {
+  bookings: Booking[];
+  onAction: (id: string, status: BookingStatus, booking: Booking) => void;
+  onDismiss: (id: string) => void;
+  updating: string | null;
+}) => {
+  if (bookings.length === 0) return null;
+  return (
+    <div className="container-heritage px-4 pt-6">
+      <AnimatePresence>
+        {bookings.map((booking) => (
+          <motion.div key={booking.id}
+            initial={{ opacity: 0, y: -16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.97 }}
+            className="mb-3 border-2 border-amber-400 bg-amber-50 overflow-hidden shadow-lg">
+            <div className="h-1 bg-amber-400 animate-pulse" />
+            <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="w-9 h-9 bg-amber-400/20 border border-amber-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Bell size={15} className="text-amber-700 animate-bounce" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-body text-[10px] uppercase tracking-[2px] text-amber-600">New Booking Request</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  </div>
+                  <p className="font-display text-sm text-amber-900 truncate">{booking.customerName}</p>
+                  <p className="font-body text-xs text-amber-700/70">{booking.date} · {booking.slot}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button disabled={updating === booking.id}
+                  onClick={() => onAction(booking.id, "confirmed", booking)}
+                  className="flex items-center gap-1.5 px-4 py-2 font-body text-xs uppercase tracking-[1px] text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 transition-all">
+                  {updating === booking.id ? <Spin /> : <Check size={11} />} Accept
+                </button>
+                <button disabled={updating === booking.id}
+                  onClick={() => onAction(booking.id, "cancelled", booking)}
+                  className="flex items-center gap-1.5 px-4 py-2 font-body text-xs uppercase tracking-[1px] border border-red-400 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-all">
+                  <X size={11} /> Reject
+                </button>
+                <button onClick={() => onDismiss(booking.id)} className="p-2 text-amber-500 hover:text-amber-700 transition-colors" title="Dismiss">
+                  <X size={13} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ─── Booking Card ─────────────────────────────────────────────────────────────
 const BookingCard = ({ booking, onAction, onView, updating }: {
   booking: Booking;
-  onAction: (id: string, status: BookingStatus) => void;
+  onAction: (id: string, status: BookingStatus, booking: Booking) => void;
   onView: (b: Booking) => void;
   updating: string | null;
 }) => {
   const cfg = S[booking.status];
-  const Icon = cfg.icon;
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white border transition-all hover:shadow-md group"
-      style={{ borderColor: `${ORG}20` }}
-    >
-      {/* Top bar */}
-      <div
-        className="flex items-center justify-between px-5 py-3 border-b"
-        style={{
-          borderColor: `${ORG}15`,
-          backgroundImage: BLOCKPRINT_BG,
-          backgroundColor: "hsl(var(--sandstone)/0.5)",
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
-          <span
-            className={`font-body text-[10px] uppercase tracking-[1.5px] ${cfg.color}`}
-          >
-            {cfg.label}
-          </span>
-        </div>
-        <span className="font-body text-[10px] text-muted-foreground/60">
-          {formatDate(booking.createdAt)}
+    <div className="bg-white border p-5 transition-all hover:shadow-md relative overflow-hidden"
+      style={{ borderColor: `${ORG}20`, backgroundImage: BLOCKPRINT_BG }}>
+      <div className="absolute top-0 left-0 w-0.5 h-full" style={{ background: cfg.dot.replace("bg-", "") }} />
+
+      <div className="flex items-center justify-between mb-4">
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 font-body text-[10px] uppercase tracking-[1px] border ${cfg.color} ${cfg.bg} ${cfg.border}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+          {cfg.label}
         </span>
+        <span className="font-body text-[10px] text-muted-foreground">{formatDate(booking.createdAt)}</span>
       </div>
 
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-4">
-          {/* Customer info */}
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div
-              className="w-10 h-10 flex-shrink-0 flex items-center justify-center border font-display text-base"
-              style={{
-                borderColor: `${ORG}40`,
-                background: `${ORG}10`,
-                color: ORG,
-              }}
-            >
-              {booking.customerName?.charAt(0)?.toUpperCase() || "?"}
-            </div>
-            <div className="min-w-0">
-              <p className="font-display text-sm text-heritage-heading truncate">
-                {booking.customerName}
-              </p>
-              <p className="font-body text-xs text-muted-foreground truncate">
-                {booking.customerEmail}
-              </p>
-              {booking.customerPhone && (
-                <p className="font-body text-xs text-muted-foreground">
-                  {booking.customerPhone}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* View button */}
-          <button
-            onClick={() => onView(booking)}
-            className="flex-shrink-0 flex items-center gap-1.5 font-body text-[10px] uppercase tracking-[1px] px-3 py-1.5 border transition-all hover:bg-sandstone"
-            style={{ borderColor: `${ORG}40`, color: ORG }}
-          >
-            <Eye size={11} /> Details
-          </button>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-8 h-8 border flex items-center justify-center flex-shrink-0"
+          style={{ borderColor: `${ORG}30`, background: `${ORG}10` }}>
+          <User size={13} style={{ color: ORG }} />
         </div>
-
-        {/* Date & slot */}
-        <div
-          className="flex flex-wrap gap-4 mt-4 pt-4 border-t"
-          style={{ borderColor: `${ORG}15` }}
-        >
-          <div className="flex items-center gap-1.5">
-            <Calendar size={12} style={{ color: ORG }} />
-            <span className="font-body text-xs text-foreground">
-              {booking.date}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Clock size={12} style={{ color: ORG }} />
-            <span className="font-body text-xs text-foreground">
-              {booking.slot}
-            </span>
-          </div>
-          {booking.amount && (
-            <div className="flex items-center gap-1.5">
-              <IndianRupee size={12} style={{ color: ORG }} />
-              <span className="font-body text-xs text-foreground">
-                {booking.amount}
-              </span>
-            </div>
-          )}
+        <div className="min-w-0">
+          <p className="font-display text-sm text-heritage-heading truncate">{booking.customerName}</p>
+          <p className="font-body text-xs text-muted-foreground truncate">{booking.customerEmail}</p>
+          {booking.customerPhone && <p className="font-body text-xs text-muted-foreground">{booking.customerPhone}</p>}
         </div>
+        <button onClick={() => onView(booking)}
+          className="flex-shrink-0 flex items-center gap-1.5 font-body text-[10px] uppercase tracking-[1px] px-3 py-1.5 border transition-all hover:bg-sandstone"
+          style={{ borderColor: `${ORG}40`, color: ORG }}>
+          <Eye size={11} /> Details
+        </button>
+      </div>
 
-        {/* Actions */}
-        {(cfg.actionNext ||
-          booking.status === "pending" ||
-          booking.status === "confirmed" ||
-          booking.status === "active") && (
-          <div className="flex items-center gap-2 mt-4">
-            {cfg.actionNext && cfg.actionLabel && (
-              <button
-                disabled={updating === booking.id}
-                onClick={() => onAction(booking.id, cfg.actionNext!)}
-                className="flex items-center gap-1.5 px-4 py-2 font-body text-xs uppercase tracking-[1px] text-white transition-all disabled:opacity-50"
-                style={{
-                  background: booking.status === "pending" ? "#16a34a" : ORG,
-                }}
-              >
-                {updating === booking.id ? <Spin /> : <Check size={11} />}
-                {cfg.actionLabel}
-              </button>
-            )}
-            {/* Cancel option for pending & confirmed */}
-            {(booking.status === "pending" ||
-              booking.status === "confirmed") && (
-              <button
-                disabled={updating === booking.id}
-                onClick={() => onAction(booking.id, "cancelled")}
-                className="flex items-center gap-1.5 px-4 py-2 font-body text-xs uppercase tracking-[1px] border border-red-300 text-red-500 hover:bg-red-50 transition-all disabled:opacity-50"
-              >
-                <X size={11} /> Reject
-              </button>
-            )}
+      <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t" style={{ borderColor: `${ORG}15` }}>
+        <div className="flex items-center gap-1.5">
+          <Calendar size={12} style={{ color: ORG }} />
+          <span className="font-body text-xs text-foreground">{booking.date}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Clock size={12} style={{ color: ORG }} />
+          <span className="font-body text-xs text-foreground">{booking.slot}</span>
+        </div>
+        {booking.amount && (
+          <div className="flex items-center gap-1.5">
+            <IndianRupee size={12} style={{ color: ORG }} />
+            <span className="font-body text-xs text-foreground">{booking.amount}</span>
           </div>
         )}
       </div>
-    </motion.div>
+
+      {(cfg.actionNext || booking.status === "pending" || booking.status === "confirmed" || booking.status === "active") && (
+        <div className="flex items-center gap-2 mt-4">
+          {cfg.actionNext && cfg.actionLabel && (
+            <button disabled={updating === booking.id}
+              onClick={() => onAction(booking.id, cfg.actionNext!, booking)}
+              className="flex items-center gap-1.5 px-4 py-2 font-body text-xs uppercase tracking-[1px] text-white transition-all disabled:opacity-50"
+              style={{ background: booking.status === "pending" ? "#16a34a" : ORG }}>
+              {updating === booking.id ? <Spin /> : <Check size={11} />}
+              {cfg.actionLabel}
+            </button>
+          )}
+          {(booking.status === "pending" || booking.status === "confirmed") && (
+            <button disabled={updating === booking.id}
+              onClick={() => onAction(booking.id, "cancelled", booking)}
+              className="flex items-center gap-1.5 px-4 py-2 font-body text-xs uppercase tracking-[1px] border border-red-300 text-red-500 hover:bg-red-50 transition-all disabled:opacity-50">
+              <X size={11} /> Reject
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
 // ─── Detail Modal ──────────────────────────────────────────────────────────────
 const DetailModal = ({ booking, onClose, onAction, updating }: {
   booking: Booking; onClose: () => void;
-  onAction: (id: string, status: BookingStatus) => void;
+  onAction: (id: string, status: BookingStatus, booking: Booking) => void;
   updating: string | null;
 }) => {
   const cfg = S[booking.status];
   const rows = [
-    { icon: User,        label: "Customer",  value: booking.customerName  },
-    { icon: Mail,        label: "Email",     value: booking.customerEmail },
-    { icon: Phone,       label: "Phone",     value: booking.customerPhone || "—" },
-    { icon: Calendar,    label: "Date",      value: booking.date          },
-    { icon: Clock,       label: "Time Slot", value: booking.slot          },
-    { icon: IndianRupee, label: "Amount",    value: booking.amount || "Pay at Visit" },
+    { icon: User,        label: "Customer",  value: booking.customerName           },
+    { icon: Mail,        label: "Email",     value: booking.customerEmail          },
+    { icon: Phone,       label: "Phone",     value: booking.customerPhone || "—"   },
+    { icon: Calendar,    label: "Date",      value: booking.date                   },
+    { icon: Clock,       label: "Time Slot", value: booking.slot                   },
+    { icon: IndianRupee, label: "Amount",    value: booking.amount || "Pay at Visit"},
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[150] bg-ink/70 flex items-center justify-center p-4 overflow-y-auto"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 16 }}
-        className="relative w-full max-w-md bg-white shadow-2xl my-10"
-        style={{ backgroundImage: BLOCKPRINT_BG }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-6 py-4 border-b"
-          style={{ borderColor: `${ORG}25` }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="h-5 w-0.5" style={{ background: ORG }} />
-            <h3 className="font-display text-base uppercase tracking-[2px] text-heritage-heading">
-              Booking Details
-            </h3>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[150] bg-ink/70 flex items-center justify-center p-4"
+      onClick={onClose}>
+      <motion.div initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 24, scale: 0.97 }}
+        className="w-full max-w-md bg-white overflow-hidden shadow-2xl"
+        onClick={e => e.stopPropagation()}>
+
+        <div className="bg-ink px-6 py-4 flex items-center justify-between" style={{ backgroundImage: MANDALA_BG }}>
+          <div>
+            <p className="font-body text-[10px] uppercase tracking-[2px] text-parchment/50 mb-1">Booking Detail</p>
+            <h3 className="font-display text-lg text-parchment">{booking.customerName}</h3>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sandstone transition-colors"
-          >
-            <X size={16} />
-          </button>
+          <button onClick={onClose} className="text-parchment/50 hover:text-parchment transition-colors"><X size={18} /></button>
         </div>
 
-        {/* Status banner */}
-        <div
-          className={`flex items-center gap-3 px-6 py-3 ${cfg.bg} border-b ${cfg.border}`}
-        >
-          <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-          <span
-            className={`font-body text-xs uppercase tracking-[1.5px] ${cfg.color}`}
-          >
-            Status: {cfg.label}
-          </span>
-          <span className="ml-auto font-body text-[10px] text-muted-foreground/60">
-            Booked {formatDate(booking.createdAt)}
+        <div className="px-6 pt-5 pb-3">
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 font-body text-[10px] uppercase tracking-[1px] border ${cfg.color} ${cfg.bg} ${cfg.border}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />{cfg.label}
           </span>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-5 space-y-4">
-          {rows.map(
-            ({ icon: Icon, label, value }) =>
-              value && (
-                <div key={label} className="flex items-start gap-3">
-                  <div
-                    className="w-8 h-8 flex-shrink-0 flex items-center justify-center border bg-sandstone"
-                    style={{ borderColor: `${ORG}35` }}
-                  >
-                    <Icon size={13} style={{ color: ORG }} />
-                  </div>
-                  <div>
-                    <p className="font-body text-[10px] uppercase tracking-[1.5px] text-muted-foreground/55 mb-0.5">
-                      {label}
-                    </p>
-                    <p className="font-body text-sm text-foreground">{value}</p>
-                  </div>
-                </div>
-              ),
-          )}
-
+        <div className="px-6 pb-4 space-y-3">
+          {rows.map(({ icon: Icon, label, value }) => (
+            <div key={label} className="flex items-center gap-3">
+              <div className="w-7 h-7 border flex items-center justify-center flex-shrink-0"
+                style={{ borderColor: `${ORG}30`, background: `${ORG}08` }}>
+                <Icon size={12} style={{ color: ORG }} />
+              </div>
+              <div>
+                <p className="font-body text-[9px] uppercase tracking-[1.5px] text-muted-foreground">{label}</p>
+                <p className="font-display text-sm text-heritage-heading">{value}</p>
+              </div>
+            </div>
+          ))}
           {booking.notes && (
-            <div
-              className="mt-4 p-4 border"
-              style={{
-                borderColor: `${ORG}25`,
-                background: "hsl(var(--sandstone))",
-              }}
-            >
-              <p className="font-body text-[10px] uppercase tracking-[1.5px] text-muted-foreground/55 mb-1">
-                Notes
-              </p>
-              <p className="font-body text-sm text-muted-foreground leading-relaxed">
-                {booking.notes}
-              </p>
+            <div className="p-3 border mt-2" style={{ borderColor: `${ORG}25`, background: `${ORG}06` }}>
+              <p className="font-body text-[9px] uppercase tracking-[1.5px] text-muted-foreground mb-1">Notes</p>
+              <p className="font-body text-xs text-foreground">{booking.notes}</p>
             </div>
           )}
         </div>
 
-        {/* Actions */}
-        {(cfg.actionNext ||
-          booking.status === "pending" ||
-          booking.status === "confirmed") && (
-          <div className="flex gap-3 px-6 pb-6">
+        {(cfg.actionNext || booking.status === "pending" || booking.status === "confirmed") && (
+          <div className="px-6 pb-6 flex gap-2">
             {cfg.actionNext && cfg.actionLabel && (
-              <button
-                disabled={updating === booking.id}
-                onClick={() => {
-                  onAction(booking.id, cfg.actionNext!);
-                  onClose();
-                }}
+              <button disabled={updating === booking.id}
+                onClick={() => { onAction(booking.id, cfg.actionNext!, booking); onClose(); }}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 font-body text-xs uppercase tracking-[1px] text-white disabled:opacity-50 transition-all"
-                style={{
-                  background: booking.status === "pending" ? "#16a34a" : ORG,
-                }}
-              >
+                style={{ background: booking.status === "pending" ? "#16a34a" : ORG }}>
                 {updating === booking.id ? <Spin /> : <Check size={11} />}
                 {cfg.actionLabel}
               </button>
             )}
-            {(booking.status === "pending" ||
-              booking.status === "confirmed") && (
-              <button
-                disabled={updating === booking.id}
-                onClick={() => {
-                  onAction(booking.id, "cancelled");
-                  onClose();
-                }}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 font-body text-xs uppercase tracking-[1px] border border-red-300 text-red-500 hover:bg-red-50 disabled:opacity-50 transition-all"
-              >
+            {(booking.status === "pending" || booking.status === "confirmed") && (
+              <button disabled={updating === booking.id}
+                onClick={() => { onAction(booking.id, "cancelled", booking); onClose(); }}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 font-body text-xs uppercase tracking-[1px] border border-red-300 text-red-500 hover:bg-red-50 disabled:opacity-50 transition-all">
                 <X size={12} /> Reject
               </button>
             )}
@@ -435,38 +326,61 @@ export default function KarigarDashboard() {
   const navigate = useNavigate();
   const [bookings,    setBookings]    = useState<Booking[]>([]);
   const [loading,     setLoading]     = useState(true);
-  const [refreshing,  setRefreshing]  = useState(false);
   const [activeTab,   setActiveTab]   = useState<TabKey>("all");
   const [updating,    setUpdating]    = useState<string | null>(null);
   const [detail,      setDetail]      = useState<Booking | null>(null);
   const [karigarName, setKarigarName] = useState("");
+  const [karigarDocId, setKarigarDocId] = useState<string>("");
 
-  // ── Fetch bookings ──────────────────────────────────────────────────────────
-  const fetchBookings = async (uid: string, silent = false) => {
-    if (!silent) setLoading(true);
-    else setRefreshing(true);
-    try {
-      const snap = await getDocs(
-        query(
-  collection(db, "bookings"),
-  where("karigarUid", "==", uid),
-  orderBy("createdAt", "desc")
-)
-      );
+  const initialLoadDone = useRef(false);
+  const [alertBookings, setAlertBookings] = useState<Booking[]>([]);
+  const unsubRef = useRef<(() => void) | null>(null);
+
+  // ── Subscribe to bookings in real-time using craftsmanId (doc ID) ──────────
+  // This is the most reliable query — no composite index needed
+  const subscribeBookings = (docId: string) => {
+    unsubRef.current?.();
+    initialLoadDone.current = false;
+
+    const q = query(
+      collection(db, "bookings"),
+      where("craftsmanId", "==", docId)
+      // ✅ NO orderBy here — avoids the composite index requirement
+      // We sort in JS below instead
+    );
+
+    unsubRef.current = onSnapshot(q, (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Booking[];
-      // Sort newest first
+
+      // Sort newest first in JS
       data.sort((a, b) => {
         const at = a.createdAt?.toDate?.() ?? new Date(a.createdAt ?? 0);
         const bt = b.createdAt?.toDate?.() ?? new Date(b.createdAt ?? 0);
         return bt.getTime() - at.getTime();
       });
+
       setBookings(data);
-    } catch (err) {
-      console.error("Error fetching bookings:", err);
-    } finally {
       setLoading(false);
-      setRefreshing(false);
-    }
+
+      // After first load, watch for new PENDING bookings and show alert banners
+      if (initialLoadDone.current) {
+        snap.docChanges().forEach(change => {
+          if (change.type === "added") {
+            const nb = { id: change.doc.id, ...change.doc.data() } as Booking;
+            if (nb.status === "pending") {
+              setAlertBookings(prev =>
+                prev.find(b => b.id === nb.id) ? prev : [nb, ...prev]
+              );
+            }
+          }
+        });
+      } else {
+        initialLoadDone.current = true;
+      }
+    }, (err) => {
+      console.error("Bookings listener error:", err);
+      setLoading(false);
+    });
   };
 
   useEffect(() => {
@@ -475,30 +389,61 @@ export default function KarigarDashboard() {
         navigate("/", { state: { openLogin: true } });
         return;
       }
-      // Verify this user has a karigar profile
-      const karigarSnap = await getDocs(
+
+      // Get karigar's own craftsmen doc
+      const snap = await getDocs(
         query(collection(db, "craftsmen"), where("userId", "==", user.uid))
       );
-      if (karigarSnap.empty) { navigate("/join"); return; }
+      if (snap.empty) { navigate("/join"); return; }
 
-      const karigarData = karigarSnap.docs[0].data();
+      const karigarDoc = snap.docs[0];
+      const karigarData = karigarDoc.data();
+      const docId = karigarDoc.id;
+
+      setKarigarDocId(docId);
       setKarigarName(karigarData.personal?.profileName || karigarData.personal?.name || "Karigar");
-      await fetchBookings(user.uid);
+
+      // Subscribe using the Firestore doc ID — always reliable
+      subscribeBookings(docId);
     });
-    return () => unsub();
+
+    return () => {
+      unsub();
+      unsubRef.current?.();
+    };
   }, [navigate]);
 
-  // ── Update booking status ───────────────────────────────────────────────────
-  const handleAction = async (bookingId: string, newStatus: BookingStatus) => {
+  const dismissAlert = (id: string) => setAlertBookings(prev => prev.filter(b => b.id !== id));
+
+  // ── Accept / Reject — updates Firestore + notifies customer ───────────────
+  const handleAction = async (bookingId: string, newStatus: BookingStatus, booking?: Booking) => {
     setUpdating(bookingId);
+    setAlertBookings(prev => prev.filter(b => b.id !== bookingId));
+
+    const target = booking ?? bookings.find(b => b.id === bookingId);
+
     try {
       await updateDoc(doc(db, "bookings", bookingId), {
         status: newStatus,
-        updatedAt: new Date(),
+        updatedAt: serverTimestamp(),
       });
-      setBookings(prev =>
-        prev.map(b => b.id === bookingId ? { ...b, status: newStatus } : b)
-      );
+
+      // Optimistic local update
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, status: newStatus } : b));
+
+      // Notify customer when karigar accepts or rejects
+      if (target?.customerUid && (newStatus === "confirmed" || newStatus === "cancelled")) {
+        await addDoc(collection(db, "customerNotifications"), {
+          customerUid: target.customerUid,
+          bookingId,
+          karigarName,
+          date:        target.date,
+          slot:        target.slot,
+          newStatus,
+          read:        false,
+          createdAt:   serverTimestamp(),
+        });
+      }
     } catch (err) {
       console.error("Status update failed:", err);
       alert("Could not update booking. Please try again.");
@@ -507,7 +452,6 @@ export default function KarigarDashboard() {
     }
   };
 
-  // ── Derived counts ──────────────────────────────────────────────────────────
   const counts = useMemo(() => ({
     all:       bookings.length,
     pending:   bookings.filter(b => b.status === "pending").length,
@@ -541,7 +485,6 @@ export default function KarigarDashboard() {
               <ArrowLeft size={12} /> Back to Profile
             </Link>
           </div>
-
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
             <div>
               <div className="flex items-center gap-2 mb-3">
@@ -551,18 +494,16 @@ export default function KarigarDashboard() {
               <h1 className="font-display text-4xl text-parchment leading-tight mb-2">Bookings</h1>
               <p className="font-body text-sm text-parchment/45">{karigarName}</p>
             </div>
-
-            {/* Refresh */}
-            <button onClick={() => auth.currentUser && fetchBookings(auth.currentUser.uid, true)}
-              disabled={refreshing}
-              className="inline-flex items-center gap-2 px-4 py-2.5 font-body text-xs uppercase tracking-[1.5px] border text-parchment/70 hover:text-parchment transition-all disabled:opacity-50"
-              style={{ borderColor: `${ORG}50` }}>
-              <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </button>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 border font-body text-[10px] uppercase tracking-[1.5px] text-parchment/60"
+              style={{ borderColor: `${ORG}40` }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live Updates
+            </div>
           </div>
         </div>
       </div>
+
+      {/* ══ NEW BOOKING ALERT BANNERS ════════════════════════════════════════ */}
+      <NewBookingAlert bookings={alertBookings} onAction={handleAction} onDismiss={dismissAlert} updating={updating} />
 
       <div className="container-heritage px-4 py-10">
 
@@ -576,8 +517,7 @@ export default function KarigarDashboard() {
             { key: "cancelled", label: "Cancelled", icon: Ban,          accent: "#ef4444" },
           ].map(({ key, label, icon, accent }) => (
             <StatCard key={key} label={label} value={counts[key as TabKey]}
-              icon={icon} accent={accent}
-              active={activeTab === key}
+              icon={icon} accent={accent} active={activeTab === key}
               onClick={() => setActiveTab(key as TabKey)} />
           ))}
         </div>
@@ -625,12 +565,7 @@ export default function KarigarDashboard() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ delay: i * 0.04 }}>
-                  <BookingCard
-                    booking={booking}
-                    onAction={handleAction}
-                    onView={setDetail}
-                    updating={updating}
-                  />
+                  <BookingCard booking={booking} onAction={handleAction} onView={setDetail} updating={updating} />
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -652,28 +587,22 @@ export default function KarigarDashboard() {
               <div>
                 <p className="font-body text-[10px] uppercase tracking-[2px] text-muted-foreground/60 mb-0.5">Completion Rate</p>
                 <p className="font-display text-2xl text-emerald-600">
-                  {counts.all > 0 ? Math.round((counts.completed / counts.all) * 100) : 0}%
+                  {counts.all > 0 ? `${Math.round((counts.completed / counts.all) * 100)}%` : "—"}
                 </p>
               </div>
               <div className="h-10 w-px bg-muted/30" />
               <div>
-                <p className="font-body text-[10px] uppercase tracking-[2px] text-muted-foreground/60 mb-0.5">Needs Attention</p>
-                <p className="font-display text-2xl text-amber-600">{counts.pending + counts.confirmed}</p>
+                <p className="font-body text-[10px] uppercase tracking-[2px] text-muted-foreground/60 mb-0.5">Pending Action</p>
+                <p className="font-display text-2xl text-amber-600">{counts.pending}</p>
               </div>
             </div>
           </motion.div>
         )}
       </div>
 
-      {/* ══ DETAIL MODAL ════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {detail && (
-          <DetailModal
-            booking={detail}
-            onClose={() => setDetail(null)}
-            onAction={handleAction}
-            updating={updating}
-          />
+          <DetailModal booking={detail} onClose={() => setDetail(null)} onAction={handleAction} updating={updating} />
         )}
       </AnimatePresence>
     </div>

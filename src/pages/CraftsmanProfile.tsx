@@ -429,7 +429,7 @@ const CraftsmanProfile = () => {
         })
       : "";
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (selectedDate === null || !selectedSlot) return;
     if (!user) {
       setShowLoginPrompt(true);
@@ -439,7 +439,39 @@ const CraftsmanProfile = () => {
       }, 1800);
       return;
     }
-    setBooked(true);
+
+    try {
+      // Always read userId fresh from Firestore doc to avoid stale/empty value
+      let karigarUid = craftsman.userId || "";
+      if (!karigarUid || karigarUid === "admin_seeded") {
+        try {
+          const snap = await getDoc(doc(db, "craftsmen", craftsman.id));
+          if (snap.exists()) karigarUid = snap.data().userId || "";
+        } catch { /* non-fatal */ }
+      }
+
+      await addDoc(collection(db, "bookings"), {
+        craftsmanId:   craftsman.id,           // Firestore doc ID — used in dashboard query
+        craftsmanName: craftsman.name ?? "",
+        karigarUid,                            // auth UID — fallback
+        karigarName:   craftsman.name ?? "",
+
+        customerUid:   user.uid,
+        customerName:  user.displayName || user.email?.split("@")[0] || "Guest",
+        customerEmail: user.email || "",
+
+        date:          confirmedDate,
+        slot:          selectedSlot,
+        status:        "pending",
+        seenByKarigar: false,
+        createdAt:     serverTimestamp(),
+      });
+
+      setBooked(true);
+    } catch (err: any) {
+      console.error("Booking failed:", err);
+      alert("Booking failed: " + err.message);
+    }
   };
 
   const isVideo = (url: string) =>

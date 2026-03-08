@@ -41,6 +41,7 @@ const BookingPage = () => {
   const [loginOpen, setLoginOpen] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [firestoreArtisans, setFirestoreArtisans] = useState<Craftsman[]>([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     getDocs(
@@ -113,48 +114,63 @@ const BookingPage = () => {
     setBooked(false);
   };
 
-const handleConfirm = async () => {
-  if (selectedDate === null || !selectedSlot) return;
+  const handleConfirm = async () => {
+    if (selectedDate === null || !selectedSlot || !craftsman) return;
 
-  if (!user) {
-    setShowLoginPrompt(true);
-    setTimeout(() => {
-      setShowLoginPrompt(false);
-      setLoginOpen(true);
-    }, 1800);
-    return;
-  }
+    if (!user) {
+      setShowLoginPrompt(true);
+      setTimeout(() => {
+        setShowLoginPrompt(false);
+        setLoginOpen(true);
+      }, 1800);
+      return;
+    }
 
-  console.log("🔥 handleConfirm fired");
-  console.log("user.uid:", user.uid);
-  console.log("craftsman id:", craftsman?.id);
+    setSaving(true);
+    try {
+      // ── Always fetch the karigar doc fresh to get the real userId ──────────
+      // craftsman.userId can be stale/empty for seeded artisans
+      let karigarUid = craftsman.userId || "";
+      if (!karigarUid || karigarUid === "admin_seeded") {
+        try {
+          const snap = await getDoc(doc(db, "craftsmen", craftsman.id));
+          if (snap.exists()) {
+            karigarUid = snap.data().userId || "";
+          }
+        } catch {
+          // non-fatal — karigarUid stays empty, dashboard won't show it
+          // but MyBookings still will
+        }
+      }
 
-  try {
-    const karigarUid = craftsman?.userId || "";
-    const karigarName = craftsman?.name || "";
+      await addDoc(collection(db, "bookings"), {
+        // ── Karigar identifiers (both, for reliable querying) ──────────────
+        craftsmanId:   craftsman.id,          // doc ID — used in dashboard query
+        craftsmanName: craftsman.name ?? "",
+        karigarUid:    karigarUid,             // auth UID — fallback query
+        karigarName:   craftsman.name ?? "",
 
-    const bookingRef = await addDoc(collection(db, "bookings"), {
-      craftsmanId: craftsman?.id ?? "",
-      craftsmanName: craftsman?.name ?? "",
-      karigarUid: karigarUid,
-      karigarName,
-      customerUid: user.uid,
-      customerName: user.displayName || "Guest",
-      customerEmail: user.email || "",
-      date: confirmedDate,
-      slot: selectedSlot,
-      status: "pending",
-      seenByKarigar: false,
-      createdAt: serverTimestamp(),
-    });
+        // ── Customer info ──────────────────────────────────────────────────
+        customerUid:   user.uid,
+        customerName:  user.displayName || user.email?.split("@")[0] || "Guest",
+        customerEmail: user.email || "",
 
-    console.log("✅ Booking saved! ID:", bookingRef.id);
-    setBooked(true);
-  } catch (err: any) {
-    console.error("❌ Booking failed:", err);
-    alert("Booking failed: " + err.message);
-  }
-};
+        // ── Booking details ────────────────────────────────────────────────
+        date:          confirmedDate,
+        slot:          selectedSlot,
+        status:        "pending",
+        seenByKarigar: false,
+        createdAt:     serverTimestamp(),
+      });
+
+      setBooked(true);
+    } catch (err: any) {
+      console.error("❌ Booking failed:", err);
+      alert("Booking failed: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div style={creamBg}>
@@ -190,40 +206,31 @@ const handleConfirm = async () => {
                       className={
                         "w-full text-left flex items-center gap-4 p-4 border transition-all " +
                         (isChosen
-                          ? "border-gold bg-sandstone"
-                          : "border-gold/40 bg-sandstone/50 hover:border-gold hover:bg-sandstone")
+                          ? "border-gold bg-sandstone shadow-sm"
+                          : "border-gold/20 hover:border-gold/50")
                       }
                     >
                       <img
                         src={img}
                         alt={c.name}
-                        className="w-14 h-14 object-cover rounded-sm border border-gold/30 flex-shrink-0"
+                        className="w-14 h-14 object-cover rounded-sm border border-gold/20"
                       />
-                      <div className="min-w-0">
-                        <p className="font-display text-sm text-heritage-heading truncate">
+                      <div>
+                        <p className="font-display text-sm text-heritage-heading">
                           {c.name}
                         </p>
                         <p className="font-body text-xs text-muted-foreground">
                           {c.craft}
                         </p>
                         <p className="font-body text-xs text-muted-foreground">
-                          {c.location}, {c.region}
+                          {c.location || c.region}
                         </p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Star
-                            size={10}
-                            className="text-gold"
-                            fill="currentColor"
-                          />
-                          <span className="font-body text-xs text-gold">
-                            {c.rating}
-                          </span>
-                        </div>
                       </div>
                       {isChosen && (
-                        <div className="ml-auto flex-shrink-0 w-5 h-5 rounded-full bg-gold flex items-center justify-center">
-                          <Check size={12} className="text-ink" />
-                        </div>
+                        <Check
+                          size={16}
+                          className="ml-auto text-gold flex-shrink-0"
+                        />
                       )}
                     </button>
                   );
@@ -231,124 +238,114 @@ const handleConfirm = async () => {
               </div>
             </div>
 
-            {/* Step 2: Pick a date */}
-            {chosenId && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
+            {/* Step 2: Calendar */}
+            {craftsman && (
+              <div>
                 <h2 className="font-display text-lg text-heritage-heading mb-4">
-                  Step 2 — Select a Date
+                  Step 2 — Choose a Date
                 </h2>
-                <div className="bg-sandstone border border-gold p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-display text-base text-heritage-heading">
-                      {activeMonth.toLocaleDateString("en-IN", {
-                        month: "long",
-                        year: "numeric",
-                      })}
-                    </h3>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={prevMonth}
-                        className="w-8 h-8 flex items-center justify-center border border-gold hover:bg-parchment transition-colors"
-                      >
-                        <ChevronLeft size={16} />
-                      </button>
-                      <button
-                        onClick={nextMonth}
-                        className="w-8 h-8 flex items-center justify-center border border-gold hover:bg-parchment transition-colors"
-                      >
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-7 mb-2">
-                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d, i) => (
-                      <div
-                        key={i}
-                        className="text-center font-body text-xs text-muted-foreground py-1"
-                      >
-                        {d}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-1">
-                    {calendarCells.map((date, i) => {
-                      if (!date) return <div key={i} />;
-                      const isPast = date < today;
-                      const isSelected =
-                        selectedDate === date.getDate() &&
-                        activeMonth.getMonth() === month &&
-                        activeMonth.getFullYear() === year;
-                      const isToday = isSameDay(date, today);
-
-                      let cls =
-                        "w-full aspect-square flex items-center justify-center rounded-full font-body text-sm transition-all ";
-                      if (isPast)
-                        cls += "text-muted-foreground/30 cursor-not-allowed ";
-                      else cls += "hover:bg-gold/20 cursor-pointer ";
-                      if (isSelected) cls += "bg-gold text-ink font-bold ";
-                      else if (isToday)
-                        cls += "border border-gold text-gold font-semibold ";
-
-                      return (
-                        <button
-                          key={i}
-                          disabled={isPast}
-                          onClick={() => {
-                            setSelectedDate(date.getDate());
-                            setSelectedSlot(null);
-                          }}
-                          className={cls}
-                        >
-                          {date.getDate()}
-                        </button>
-                      );
+                {/* Month nav */}
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    onClick={prevMonth}
+                    className="p-2 hover:bg-sandstone rounded-sm transition-colors"
+                  >
+                    <ChevronLeft size={16} className="text-muted-foreground" />
+                  </button>
+                  <p className="font-display text-sm text-heritage-heading">
+                    {activeMonth.toLocaleDateString("en-IN", {
+                      month: "long",
+                      year: "numeric",
                     })}
-                  </div>
+                  </p>
+                  <button
+                    onClick={nextMonth}
+                    className="p-2 hover:bg-sandstone rounded-sm transition-colors"
+                  >
+                    <ChevronRight
+                      size={16}
+                      className="text-muted-foreground"
+                    />
+                  </button>
                 </div>
-              </motion.div>
+
+                {/* Days of week */}
+                <div className="grid grid-cols-7 mb-2">
+                  {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+                    <div
+                      key={d}
+                      className="text-center font-body text-xs text-muted-foreground py-1"
+                    >
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Calendar grid */}
+                <div className="grid grid-cols-7 gap-1">
+                  {calendarCells.map((date, i) => {
+                    if (!date)
+                      return <div key={`empty-${i}`} className="h-9" />;
+                    const isPast = date < today;
+                    const isSelected =
+                      selectedDate === date.getDate() &&
+                      date.getMonth() === month &&
+                      date.getFullYear() === year;
+                    return (
+                      <button
+                        key={date.toISOString()}
+                        disabled={isPast}
+                        onClick={() => {
+                          setSelectedDate(date.getDate());
+                          setSelectedSlot(null);
+                        }}
+                        className={
+                          "h-9 w-full text-center font-body text-sm rounded-sm transition-all " +
+                          (isPast
+                            ? "text-muted-foreground/30 cursor-not-allowed"
+                            : isSelected
+                              ? "bg-gold text-white font-semibold"
+                              : "hover:bg-sandstone text-foreground")
+                        }
+                      >
+                        {date.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
-            {/* Step 3: Pick time slot */}
-            {selectedDate !== null && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
+            {/* Step 3: Time slot */}
+            {craftsman && selectedDate !== null && (
+              <div>
                 <h2 className="font-display text-lg text-heritage-heading mb-4">
-                  Step 3 — Select a Time
+                  Step 3 — Choose a Time
                 </h2>
-                <div className="bg-sandstone border border-gold p-6">
-                  <div className="grid grid-cols-3 gap-3">
-                    {slots.map((s) => {
-                      const cls =
-                        "py-3 border font-body text-sm transition-all " +
-                        (selectedSlot === s
-                          ? "bg-gold text-ink border-gold font-semibold"
-                          : "border-gold hover:bg-parchment");
-                      return (
-                        <button
-                          key={s}
-                          onClick={() => setSelectedSlot(s)}
-                          className={cls}
-                        >
-                          {s}
-                        </button>
-                      );
-                    })}
-                  </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {slots.map((slot) => (
+                    <button
+                      key={slot}
+                      onClick={() => setSelectedSlot(slot)}
+                      className={
+                        "py-2.5 font-body text-sm border transition-all " +
+                        (selectedSlot === slot
+                          ? "border-gold bg-sandstone text-heritage-heading"
+                          : "border-gold/20 hover:border-gold/50 text-muted-foreground")
+                      }
+                    >
+                      {slot}
+                    </button>
+                  ))}
                 </div>
-              </motion.div>
+              </div>
             )}
           </div>
 
-          {/* RIGHT — summary + confirm */}
-          <div className="space-y-6">
-            <div className="bg-sandstone border border-gold p-6 sticky top-24">
+          {/* RIGHT — booking summary */}
+          <div>
+            <div className="border border-gold/25 bg-sandstone p-6 sticky top-24">
               <h2 className="font-display text-lg text-heritage-heading mb-4">
                 Booking Summary
               </h2>
@@ -356,39 +353,41 @@ const handleConfirm = async () => {
 
               {!craftsman ? (
                 <p className="font-body text-sm text-muted-foreground">
-                  No artisan selected yet.
+                  Select an artisan to get started.
                 </p>
               ) : (
                 <>
                   {booked ? (
                     <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
                       className="text-center py-6"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
                     >
                       <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center border-2 border-amber-400 rounded-full">
-                        <Clock size={28} className="text-amber-500" />
+                        <Clock size={26} className="text-amber-500" />
                       </div>
                       <h3 className="font-display text-xl text-amber-600 mb-2">
                         Request Sent!
                       </h3>
                       <p className="font-body text-sm text-muted-foreground mb-1">
-                        {craftsman.name}
+                        {confirmedDate} at {selectedSlot}
                       </p>
                       <p className="font-body text-sm text-muted-foreground mb-1">
-                        {confirmedDate}
+                        with {craftsman.name}
                       </p>
-                      <p className="font-body text-sm text-muted-foreground mb-4">
-                        {selectedSlot}
+                      <div className="gold-divider my-4" />
+                      <p className="font-body text-sm text-amber-700 mb-4">
+                        ⏳ Pending approval from the artisan. Check{" "}
+                        <Link
+                          to="/my-bookings"
+                          className="underline text-amber-800 font-semibold"
+                        >
+                          My Bookings
+                        </Link>{" "}
+                        for updates.
                       </p>
-                      <div className="gold-divider mb-4" />
-                      <p className="font-body text-sm text-amber-700 font-medium mb-2">
-                        ⏳ Awaiting artisan approval
-                      </p>
-                      <p className="font-body text-xs text-muted-foreground mb-6">
-                        The artisan will review your request and confirm within
-                        2–3 days. Payment to be made directly at the time of
-                        visit.
+                      <p className="font-body text-xs text-muted-foreground mb-4">
+                        Payment to be made directly at the time of visit.
                       </p>
                       <button
                         onClick={() => {
@@ -434,58 +433,42 @@ const handleConfirm = async () => {
                           </span>
                         </div>
                         <div className="flex justify-between font-body text-sm">
-                          <span className="text-muted-foreground">Payment</span>
-                          <span className="text-heritage-heading font-semibold">
-                            Pay at Visit
+                          <span className="text-muted-foreground">
+                            Payment
+                          </span>
+                          <span className="text-heritage-heading">
+                            Pay at visit
                           </span>
                         </div>
                       </div>
 
-                      {/* Login prompt toast */}
-                      <AnimatePresence>
-                        {showLoginPrompt && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                            transition={{ duration: 0.2 }}
-                            className="mb-4 flex items-center gap-3 px-4 py-3 bg-[#fdf4ec] border border-[#e8740e]/50"
-                          >
-                            <div className="w-7 h-7 flex-shrink-0 rounded-full bg-[#e8740e]/10 flex items-center justify-center">
-                              <LogIn size={14} className="text-[#e8740e]" />
-                            </div>
-                            <div>
-                              <p className="font-display text-xs text-heritage-heading">
-                                Sign in required
-                              </p>
-                              <p className="font-body text-xs text-muted-foreground">
-                                Opening login…
-                              </p>
-                            </div>
-                            <div className="ml-auto">
-                              <motion.div
-                                className="h-0.5 bg-[#e8740e] origin-left"
-                                initial={{ scaleX: 0 }}
-                                animate={{ scaleX: 1 }}
-                                transition={{ duration: 1.8, ease: "linear" }}
-                                style={{ width: "40px" }}
-                              />
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                      {showLoginPrompt && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="mb-4 flex items-center gap-2 p-3 border border-amber-300 bg-amber-50 text-amber-700 font-body text-sm rounded-sm"
+                        >
+                          <LogIn size={14} />
+                          Please sign in to confirm your booking.
+                        </motion.div>
+                      )}
 
                       <button
-                        disabled={!selectedDate || !selectedSlot}
                         onClick={handleConfirm}
-                        className={
-                          "w-full btn-primary " +
-                          (!selectedDate || !selectedSlot
+                        disabled={!selectedDate || !selectedSlot || saving}
+                        className={`w-full btn-primary py-3 transition-all ${
+                          !selectedDate || !selectedSlot || saving
                             ? "opacity-40 cursor-not-allowed"
-                            : "")
-                        }
+                            : ""
+                        }`}
                       >
-                        Confirm Booking
+                        {saving
+                          ? "Saving…"
+                          : !selectedDate
+                            ? "Pick a date"
+                            : !selectedSlot
+                              ? "Pick a time"
+                              : "Confirm Booking"}
                       </button>
 
                       {(!selectedDate || !selectedSlot) && (
