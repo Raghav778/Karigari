@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState , useEffect } from "react";
 import { useBackground } from "@/hooks/useBackground";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,7 +11,7 @@ import {
   LogIn,
   Clock,
 } from "lucide-react";
-import { craftsmen } from "@/data/craftsmen";
+import { craftsmen, mapFirestoreKarigarToCraftsman, type Craftsman } from "@/data/craftsmen";
 import { getCraftImage } from "@/lib/craftImages";
 import { useAuth } from "../contexts/AuthContext";
 import LoginModal from "@/components/LoginModal";
@@ -43,8 +43,27 @@ const BookingPage = () => {
   const { user } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [firestoreArtisans, setFirestoreArtisans] = useState<Craftsman[]>([]);
 
-  const craftsman = craftsmen.find((c) => c.id === chosenId);
+  useEffect(() => {
+    getDocs(
+      query(collection(db, "craftsmen"), where("status", "==", "approved")),
+    ).then((snap) => {
+      const docs = snap.docs.map((d) =>
+        mapFirestoreKarigarToCraftsman(d.id, d.data()),
+      );
+      setFirestoreArtisans(docs);
+    });
+  }, []);
+
+  const allCraftsmen = [
+    ...craftsmen,
+    ...firestoreArtisans.filter(
+      (fc) => !craftsmen.some((sc) => sc.id === fc.id),
+    ),
+  ];
+
+  const craftsman = allCraftsmen.find((c) => c.id === chosenId);
 
   const slots = [
     "9:00 AM",
@@ -180,7 +199,7 @@ const BookingPage = () => {
                 Step 1 — Choose an Artisan
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {craftsmen.map((c) => {
+                {allCraftsmen.map((c) => {
                   const img = getCraftImage(c.image);
                   const isChosen = chosenId === c.id;
                   return (
