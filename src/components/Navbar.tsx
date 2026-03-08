@@ -102,6 +102,7 @@ const Navbar = () => {
   const [loggingOut, setLoggingOut] = useState(false);
   const [showLogoutAnim, setShowLogoutAnim] = useState(false);
   const [userName, setUserName] = useState("");
+  const firstName = (userName || user?.displayName || "User").split(" ")[0];
   const [isKarigar, setIsKarigar] = useState(false); // ← NEW
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -621,13 +622,13 @@ useEffect(() => {
                         className={`text-sm font-display uppercase tracking-[1px] hover:text-gold transition-colors underline-offset-2 hover:underline ${isDark ? "text-white" : "text-heritage-heading"}`}
                         title="View your karigar profile"
                       >
-                        {userName || user.displayName || "User"}
+                        {firstName}
                       </Link>
                     ) : (
                       <span
                         className={`text-sm font-display uppercase tracking-[1px] ${isDark ? "text-white" : "text-heritage-heading"}`}
                       >
-                        {userName || user.displayName || "User"}
+                        {firstName}
                       </span>
                     )}
 
@@ -796,11 +797,11 @@ useEffect(() => {
                         onClick={() => setOpen(false)}
                         title="View your karigar profile"
                       >
-                        {userName || user.displayName || "User"}
+                        {firstName}
                       </Link>
                     ) : (
                       <span className="font-semibold">
-                        {userName || user.displayName || "User"}
+                        {firstName}
                       </span>
                     )}
                   </p>
