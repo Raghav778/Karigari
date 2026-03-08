@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { crafts } from "@/data/crafts";
-import { mapFirestoreKarigarToCraftsman, type Craftsman } from "@/data/craftsmen";
+import { craftsmen, mapFirestoreKarigarToCraftsman, type Craftsman } from "@/data/craftsmen";
 import CraftsmanCard from "@/components/CraftsmanCard";
 import {
   X,
@@ -49,7 +49,7 @@ const Discover = () => {
               region: data.craft?.region || "",
               location: data.personal?.city || data.personal?.village || "",
               experience: data.craft?.experience || "",
-              image: "default",
+              image: craftName.toLowerCase(),
               story: data.description || "",
               materials: data.materials || [],
               endangered: false,
@@ -75,7 +75,24 @@ const Discover = () => {
 
   // ── Merge static + Firestore, no duplicates ─────────────────────────────
   // Static entries whose staticId exists in Firestore are suppressed — served from Firestore instead
-  const allArtisans: Craftsman[] = firestoreCraftsmen;
+  const allArtisans: Craftsman[] = useMemo(() => {
+    const map = new Map<string, Craftsman>();
+
+    // add firestore artisans first (they should override static ones)
+    firestoreCraftsmen.forEach((a) => {
+      map.set(a.name.toLowerCase(), a);
+    });
+
+    // add static artisans only if firestore version doesn't exist
+    craftsmen.forEach((a) => {
+      const key = a.name.toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, a);
+      }
+    });
+
+    return Array.from(map.values());
+  }, [firestoreCraftsmen]);
 
   // ── Build dynamic craft list ─────────────────────────────────────────────
   const staticCraftEntries = useMemo(
