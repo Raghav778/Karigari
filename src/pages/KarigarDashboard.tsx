@@ -447,7 +447,11 @@ export default function KarigarDashboard() {
     else setRefreshing(true);
     try {
       const snap = await getDocs(
-        query(collection(db, "bookings"), where("karigarUid", "==", uid))
+        query(
+  collection(db, "bookings"),
+  where("karigarUid", "==", uid),
+  orderBy("createdAt", "desc")
+)
       );
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Booking[];
       // Sort newest first

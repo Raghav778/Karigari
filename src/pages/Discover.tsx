@@ -1,11 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { crafts } from "@/data/crafts";
-import {
-  craftsmen,
-  mapFirestoreKarigarToCraftsman,
-  type Craftsman,
-} from "@/data/craftsmen";
+import { mapFirestoreKarigarToCraftsman, type Craftsman } from "@/data/craftsmen";
 import CraftsmanCard from "@/components/CraftsmanCard";
 import {
   X,
@@ -27,9 +23,8 @@ const Discover = () => {
   const { creamBg } = useBackground();
 
   // ── Firestore approved karigar ──────────────────────────────────────────
-  const [firestoreArtisans, setFirestoreArtisans] = useState<typeof craftsmen>([]);
+  const [firestoreArtisans, setFirestoreArtisans] = useState<Craftsman[]>([]);;
   const [firestoreCraftsmen, setFirestoreCraftsmen] = useState<Craftsman[]>([]);
-  const [seededStaticIds, setSeededStaticIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchApproved = async () => {
@@ -38,13 +33,6 @@ const Discover = () => {
           query(collection(db, "craftsmen"), where("status", "==", "approved")),
         );
 
-        // Collect all staticIds that have been seeded to Firestore
-        const staticIds = new Set<string>();
-        snap.docs.forEach((d) => {
-          const sid = d.data().staticId;
-          if (sid) staticIds.add(String(sid));
-        });
-        setSeededStaticIds(staticIds);
 
         // Map to lightweight artisan objects
         const artisans = snap.docs
@@ -87,10 +75,7 @@ const Discover = () => {
 
   // ── Merge static + Firestore, no duplicates ─────────────────────────────
   // Static entries whose staticId exists in Firestore are suppressed — served from Firestore instead
-  const allArtisans: Craftsman[] = [
-    ...craftsmen.filter((sc) => !seededStaticIds.has(sc.id)),
-    ...firestoreCraftsmen,
-  ];
+  const allArtisans: Craftsman[] = firestoreCraftsmen;
 
   // ── Build dynamic craft list ─────────────────────────────────────────────
   const staticCraftEntries = useMemo(
